@@ -1,0 +1,61 @@
+change-id = 118703
+
+[llvm]
+# They deleted llvm wtf
+download-ci-llvm = false
+optimize = true
+thin-lto = true
+link-shared = false
+ninja = true
+targets = "X86"
+link-jobs = 0
+cflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
+cxxflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
+ldflags = "-Wl,-O3 -msse2"
+polly = true
+clang = true
+clang-cl = "C:/Program Files/LLVM/bin/clang-cl.exe"
+
+[build]
+build-stage = 2
+cargo-native-static = false
+# When compiling from source, you usually want all tools.
+#extended = true
+build = "x86_64-pc-windows-msvc"
+target = [
+    "i686-pc-windows-msvc",
+    "x86_64-pc-windows-msvc",
+]
+
+docs = false
+tools = [
+    "src",
+]
+
+[rust]
+channel = "dev"
+codegen-backends = ["llvm"]
+codegen-units = 1
+codegen-units-std = 1
+debug = false
+dist-src = false
+download-rustc = false
+#jemalloc = true
+#lto = "thin"
+optimize = 3
+parallel-compiler = true
+strip = true
+optimize-tests = true
+thin-lto-import-instr-limit = 100
+validate-mir-opts = 3
+use-lld = "self-contained"
+
+[dist]
+src-tarball = false
+compression-profile = "best"
+missing-tools = true
+
+# for creating a downloadable package: python x.py install, then create an archive this
+[install]
+prefix = "../dist/rust"
+sysconfdir = "."
