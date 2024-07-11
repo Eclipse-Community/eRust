@@ -1,8 +1,10 @@
 use crate::cell::UnsafeCell;
-use crate::sys::c;
+use crate::sys::mutex::ReentrantMutex;
+use crate::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct RWLock {
-    inner: UnsafeCell<c::SRWLOCK>,
+    lock: AtomicUsize,
+    held: UnsafeCell<bool>,
 }
 
 unsafe impl Send for RWLock {}
@@ -10,35 +12,79 @@ unsafe impl Sync for RWLock {}
 
 impl RWLock {
     pub const fn new() -> RWLock {
-        RWLock { inner: UnsafeCell::new(c::SRWLOCK_INIT) }
+        RWLock {
+            lock: AtomicUsize::new(0),
+            held: UnsafeCell::new(false),
+            }
     }
     #[inline]
     pub unsafe fn read(&self) {
-        c::AcquireSRWLockShared(self.inner.get())
+                let re = self.remutex();
+                (*re).lock();
+                if !self.flag_locked() {
+                    (*re).unlock();
+                    panic!("cannot recursively lock a mutex");
+                }
     }
     #[inline]
     pub unsafe fn try_read(&self) -> bool {
-        c::TryAcquireSRWLockShared(self.inner.get()) != 0
+                let re = self.remutex();
+                if !(*re).try_lock() {
+                    false
+                } else if self.flag_locked() {
+                    true
+                } else {
+                    (*re).unlock();
+                    false
+                }
     }
     #[inline]
     pub unsafe fn write(&self) {
-        c::AcquireSRWLockExclusive(self.inner.get())
+                RWLock::read(&self);
     }
     #[inline]
     pub unsafe fn try_write(&self) -> bool {
-        c::TryAcquireSRWLockExclusive(self.inner.get()) != 0
+                RWLock::try_read(&self)
     }
     #[inline]
     pub unsafe fn read_unlock(&self) {
-        c::ReleaseSRWLockShared(self.inner.get())
+        *self.held.get() = false;
+        (*self.remutex()).unlock();
     }
     #[inline]
     pub unsafe fn write_unlock(&self) {
-        c::ReleaseSRWLockExclusive(self.inner.get())
+        RWLock::read_unlock(&self)
     }
 
     #[inline]
     pub unsafe fn destroy(&self) {
-        // ...
+        match self.lock.load(Ordering::SeqCst) {
+            0 => {}
+            n => { Box::from_raw(n as *mut ReentrantMutex).destroy(); }
+        }
+    }
+
+    unsafe fn remutex(&self) -> *mut ReentrantMutex {
+        match self.lock.load(Ordering::SeqCst) {
+            0 => {}
+            n => return n as *mut _,
+        }
+        let re = box ReentrantMutex::uninitialized();
+        re.init();
+        let re = Box::into_raw(re);
+        match self.lock.compare_and_swap(0, re as usize, Ordering::SeqCst) {
+            0 => re,
+            n => { Box::from_raw(re).destroy(); n as *mut _ }
+        }
+    }
+
+    unsafe fn flag_locked(&self) -> bool {
+        if *self.held.get() {
+            false
+        } else {
+            *self.held.get() = true;
+            true
+        }
+
     }
 }

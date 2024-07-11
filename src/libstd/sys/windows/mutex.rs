@@ -20,10 +20,9 @@
 //! detect recursive locks.
 
 use crate::cell::UnsafeCell;
-use crate::mem::{self, MaybeUninit};
+use crate::mem::{MaybeUninit};
 use crate::sync::atomic::{AtomicUsize, Ordering};
 use crate::sys::c;
-use crate::sys::compat;
 
 pub struct Mutex {
     lock: AtomicUsize,
@@ -32,18 +31,6 @@ pub struct Mutex {
 
 unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
-
-#[derive(Clone, Copy)]
-enum Kind {
-    SRWLock = 1,
-    CriticalSection = 2,
-}
-
-#[inline]
-pub unsafe fn raw(m: &Mutex) -> c::PSRWLOCK {
-    debug_assert!(mem::size_of::<c::SRWLOCK>() <= mem::size_of_val(&m.lock));
-    &m.lock as *const _ as *mut _
-}
 
 impl Mutex {
     pub const fn new() -> Mutex {
@@ -57,22 +44,14 @@ impl Mutex {
     #[inline]
     pub unsafe fn init(&mut self) {}
     pub unsafe fn lock(&self) {
-        match kind() {
-            Kind::SRWLock => c::AcquireSRWLockExclusive(raw(self)),
-            Kind::CriticalSection => {
                 let re = self.remutex();
                 (*re).lock();
                 if !self.flag_locked() {
                     (*re).unlock();
                     panic!("cannot recursively lock a mutex");
                 }
-            }
-        }
     }
     pub unsafe fn try_lock(&self) -> bool {
-        match kind() {
-            Kind::SRWLock => c::TryAcquireSRWLockExclusive(raw(self)) != 0,
-            Kind::CriticalSection => {
                 let re = self.remutex();
                 if !(*re).try_lock() {
                     false
@@ -82,26 +61,18 @@ impl Mutex {
                     (*re).unlock();
                     false
                 }
-            }
-        }
     }
     pub unsafe fn unlock(&self) {
         *self.held.get() = false;
-        match kind() {
-            Kind::SRWLock => c::ReleaseSRWLockExclusive(raw(self)),
-            Kind::CriticalSection => (*self.remutex()).unlock(),
-        }
+            (*self.remutex()).unlock()
     }
     pub unsafe fn destroy(&self) {
-        match kind() {
-            Kind::SRWLock => {}
-            Kind::CriticalSection => match self.lock.load(Ordering::SeqCst) {
+            match self.lock.load(Ordering::SeqCst) {
                 0 => {}
                 n => {
                     Box::from_raw(n as *mut ReentrantMutex).destroy();
                 }
-            },
-        }
+            }
     }
 
     unsafe fn remutex(&self) -> *mut ReentrantMutex {
@@ -131,24 +102,6 @@ impl Mutex {
     }
 }
 
-fn kind() -> Kind {
-    static KIND: AtomicUsize = AtomicUsize::new(0);
-
-    let val = KIND.load(Ordering::SeqCst);
-    if val == Kind::SRWLock as usize {
-        return Kind::SRWLock;
-    } else if val == Kind::CriticalSection as usize {
-        return Kind::CriticalSection;
-    }
-
-    let ret = match compat::lookup("kernel32", "AcquireSRWLockExclusive") {
-        None => Kind::CriticalSection,
-        Some(..) => Kind::SRWLock,
-    };
-    KIND.store(ret as usize, Ordering::SeqCst);
-    ret
-}
-
 pub struct ReentrantMutex {
     inner: UnsafeCell<MaybeUninit<c::CRITICAL_SECTION>>,
 }
@@ -162,7 +115,7 @@ impl ReentrantMutex {
     }
 
     pub unsafe fn init(&self) {
-        c::InitializeCriticalSection((&mut *self.inner.get()).as_mut_ptr());
+        c::InitializeCriticalSectionAndSpinCount((&mut *self.inner.get()).as_mut_ptr(), 2000);
     }
 
     pub unsafe fn lock(&self) {

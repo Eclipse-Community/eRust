@@ -51,6 +51,7 @@ fn main() {
         println!("cargo:rustc-link-lib=bcrypt");
     } else if target.contains("windows") {
         println!("cargo:rustc-link-lib=advapi32");
+        println!("cargo:rustc-link-lib=ntdll");
         println!("cargo:rustc-link-lib=ws2_32");
         println!("cargo:rustc-link-lib=userenv");
     } else if target.contains("fuchsia") {
