@@ -1,0 +1,47 @@
+[llvm]
+optimize = true
+thin-lto = false
+link-shared = false
+ninja = false
+targets = "X86"
+experimental-targets = ""
+link-jobs = 0
+cflags = "-O2ity"
+cxxflags = "-O2ity"
+ldflags = "-Wl,-O3 -msse2"
+
+[build]
+cargo-native-static = false
+# When compiling from source, you usually want all tools.
+#extended = true
+build = "x86_64-pc-windows-msvc"
+target = [
+    "i686-pc-windows-msvc",
+    "x86_64-pc-windows-msvc",
+]
+
+docs = false
+tools = [
+    "src",
+]
+
+[rust]
+channel = "dev"
+codegen-backends = ["llvm"]
+codegen-units = 1
+codegen-units-std = 1
+debug = false
+dist-src = false
+optimize = true
+parallel-compiler = true
+optimize-tests = true
+thin-lto-import-instr-limit = 100
+
+[dist]
+src-tarball = false
+missing-tools = true
+
+# for creating a downloadable package: python x.py install, then create an archive this
+[install]
+prefix = "../dist/rust"
+sysconfdir = "."
