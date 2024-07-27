@@ -29,6 +29,9 @@ pub type WORD = u16;
 pub type CHAR = c_char;
 pub type ULONG = c_ulong;
 pub type ACCESS_MASK = DWORD;
+pub type BOOLEAN = i32;
+pub const TRUE: BOOLEAN = 1;
+pub const FALSE: BOOLEAN = 0;
 
 pub type LPCVOID = *const c_void;
 pub type LPHANDLE = *mut HANDLE;
@@ -232,6 +235,16 @@ pub unsafe extern "system" fn ReadFileEx(
         lpOverlapped,
         lpCompletionRoutine,
     )
+}
+
+pub unsafe fn TryAcquireSRWLockExclusive(srwlock: *mut SRWLOCK) -> BOOLEAN {
+    AcquireSRWLockExclusive(srwlock);
+    TRUE  // Always return TRUE for blocking lock
+}
+
+pub unsafe fn TryAcquireSRWLockShared(srwlock: *mut SRWLOCK) -> BOOLEAN {
+    AcquireSRWLockShared(srwlock);
+    TRUE  // Always return TRUE for blocking lock
 }
 
 // POSIX compatibility shims.

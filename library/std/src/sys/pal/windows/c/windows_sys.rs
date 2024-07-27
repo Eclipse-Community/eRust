@@ -570,14 +570,6 @@ extern "system" {
 }
 #[link(name = "kernel32")]
 extern "system" {
-    pub fn TryAcquireSRWLockExclusive(srwlock: *mut SRWLOCK) -> BOOLEAN;
-}
-#[link(name = "kernel32")]
-extern "system" {
-    pub fn TryAcquireSRWLockShared(srwlock: *mut SRWLOCK) -> BOOLEAN;
-}
-#[link(name = "kernel32")]
-extern "system" {
     pub fn UpdateProcThreadAttribute(
         lpattributelist: LPPROC_THREAD_ATTRIBUTE_LIST,
         dwflags: u32,
