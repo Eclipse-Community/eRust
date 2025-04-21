@@ -320,33 +320,6 @@ pub fn temp_dir() -> PathBuf {
     super::fill_utf16_buf(|buf, sz| unsafe { c::GetTempPath2W(sz, buf) }, super::os2path).unwrap()
 }
 
-#[cfg(all(not(target_vendor = "uwp"), not(target_vendor = "win7")))]
-fn home_dir_crt() -> Option<PathBuf> {
-    unsafe {
-        // Defined in processthreadsapi.h.
-        const CURRENT_PROCESS_TOKEN: usize = -4_isize as usize;
-
-        super::fill_utf16_buf(
-            |buf, mut sz| {
-                // GetUserProfileDirectoryW does not quite use the usual protocol for
-                // negotiating the buffer size, so we have to translate.
-                match c::GetUserProfileDirectoryW(
-                    ptr::without_provenance_mut(CURRENT_PROCESS_TOKEN),
-                    buf,
-                    &mut sz,
-                ) {
-                    0 if api::get_last_error() != WinError::INSUFFICIENT_BUFFER => 0,
-                    0 => sz,
-                    _ => sz - 1, // sz includes the null terminator
-                }
-            },
-            super::os2path,
-        )
-        .ok()
-    }
-}
-
-#[cfg(target_vendor = "win7")]
 fn home_dir_crt() -> Option<PathBuf> {
     unsafe {
         use crate::sys::handle::Handle;

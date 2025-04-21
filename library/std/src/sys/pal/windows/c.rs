@@ -19,9 +19,7 @@ pub const INVALID_HANDLE_VALUE: HANDLE = ::core::ptr::without_provenance_mut(-1i
 pub const EXIT_SUCCESS: u32 = 0;
 pub const EXIT_FAILURE: u32 = 1;
 
-#[cfg(target_vendor = "win7")]
 pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE { Ptr: ptr::null_mut() };
-#[cfg(target_vendor = "win7")]
 pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { Ptr: ptr::null_mut() };
 #[cfg(not(target_thread_local))]
 pub const INIT_ONCE_STATIC_INIT: INIT_ONCE = INIT_ONCE { Ptr: ptr::null_mut() };
@@ -109,16 +107,6 @@ if #[cfg(not(target_vendor = "uwp"))] {
 }
 
 // Use raw-dylib to import ProcessPrng as we can't rely on there being an import library.
-#[cfg(not(target_vendor = "win7"))]
-#[cfg_attr(
-    target_arch = "x86",
-    link(name = "bcryptprimitives", kind = "raw-dylib", import_name_type = "undecorated")
-)]
-#[cfg_attr(not(target_arch = "x86"), link(name = "bcryptprimitives", kind = "raw-dylib"))]
-extern "system" {
-    pub fn ProcessPrng(pbdata: *mut u8, cbdata: usize) -> BOOL;
-}
-
 // Functions that aren't available on every version of Windows that we support,
 // but we still use them and just provide some form of a fallback implementation.
 compat_fn_with_fallback! {
@@ -138,7 +126,6 @@ compat_fn_with_fallback! {
 
     // >= Win8 / Server 2012
     // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime
-    #[cfg(target_vendor = "win7")]
     pub fn GetSystemTimePreciseAsFileTime(lpsystemtimeasfiletime: *mut FILETIME) -> () {
         unsafe { GetSystemTimeAsFileTime(lpsystemtimeasfiletime) }
     }
@@ -150,33 +137,7 @@ compat_fn_with_fallback! {
     }
 }
 
-#[cfg(not(target_vendor = "win7"))]
-// Use raw-dylib to import synchronization functions to workaround issues with the older mingw import library.
-#[cfg_attr(
-    target_arch = "x86",
-    link(
-        name = "api-ms-win-core-synch-l1-2-0",
-        kind = "raw-dylib",
-        import_name_type = "undecorated"
-    )
-)]
-#[cfg_attr(
-    not(target_arch = "x86"),
-    link(name = "api-ms-win-core-synch-l1-2-0", kind = "raw-dylib")
-)]
-extern "system" {
-    pub fn WaitOnAddress(
-        address: *const c_void,
-        compareaddress: *const c_void,
-        addresssize: usize,
-        dwmilliseconds: u32,
-    ) -> BOOL;
-    pub fn WakeByAddressSingle(address: *const c_void);
-    pub fn WakeByAddressAll(address: *const c_void);
-}
-
 // These are loaded by `load_synch_functions`.
-#[cfg(target_vendor = "win7")]
 compat_fn_optional! {
     pub fn WaitOnAddress(
         address: *const c_void,
@@ -187,11 +148,9 @@ compat_fn_optional! {
     pub fn WakeByAddressSingle(address: *const c_void);
 }
 
-#[cfg(any(target_vendor = "win7", target_vendor = "uwp"))]
 compat_fn_with_fallback! {
     pub static NTDLL: &CStr = c"ntdll";
 
-    #[cfg(target_vendor = "win7")]
     pub fn NtCreateKeyedEvent(
         KeyedEventHandle: *mut HANDLE,
         DesiredAccess: u32,
@@ -200,7 +159,6 @@ compat_fn_with_fallback! {
     ) -> NTSTATUS {
         panic!("keyed events not available")
     }
-    #[cfg(target_vendor = "win7")]
     pub fn NtReleaseKeyedEvent(
         EventHandle: HANDLE,
         Key: *const c_void,
@@ -209,7 +167,6 @@ compat_fn_with_fallback! {
     ) -> NTSTATUS {
         panic!("keyed events not available")
     }
-    #[cfg(target_vendor = "win7")]
     pub fn NtWaitForKeyedEvent(
         EventHandle: HANDLE,
         Key: *const c_void,

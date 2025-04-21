@@ -1,6 +1,5 @@
 cfg_if::cfg_if! {
     if #[cfg(any(
-        all(target_os = "windows", not(target_vendor = "win7")),
         target_os = "linux",
         target_os = "android",
         target_os = "freebsd",
@@ -14,7 +13,7 @@ cfg_if::cfg_if! {
         pub use futex::RwLock;
     } else if #[cfg(any(
         target_family = "unix",
-        all(target_os = "windows", target_vendor = "win7"),
+        target_os = "windows",
         all(target_vendor = "fortanix", target_env = "sgx"),
         target_os = "xous",
     ))] {
