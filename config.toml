@@ -41,6 +41,7 @@ debug = false
 dist-src = false
 download-rustc = false
 #jemalloc = true
+lld = true
 #lto = "thin"
 optimize = 3
 strip = true
@@ -49,11 +50,11 @@ thin-lto-import-instr-limit = 100
 validate-mir-opts = 3
 use-lld = "self-contained"
 
+# for creating a downloadable package: python x.py dist.
 [dist]
 src-tarball = false
 compression-profile = "best"
 
-# for creating a downloadable package: python x.py install, then create an archive this
 [install]
 prefix = "../dist/rust"
 sysconfdir = "."
