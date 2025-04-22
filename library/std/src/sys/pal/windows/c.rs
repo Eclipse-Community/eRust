@@ -12,6 +12,9 @@ mod windows_sys;
 pub use windows_sys::*;
 
 pub type WCHAR = u16;
+pub type BOOLEAN = i32;
+pub const TRUE: BOOLEAN = 1;
+pub const FALSE: BOOLEAN = 0;
 
 pub const INVALID_HANDLE_VALUE: HANDLE = ::core::ptr::without_provenance_mut(-1i32 as _);
 
@@ -104,6 +107,17 @@ cfg_if::cfg_if! {
 if #[cfg(not(target_vendor = "uwp"))] {
     pub const EXCEPTION_CONTINUE_SEARCH: i32 = 0;
 }
+}
+
+pub unsafe fn TryAcquireSRWLockExclusive(srwlock: *mut SRWLOCK) -> BOOLEAN {
+    unsafe {AcquireSRWLockExclusive(srwlock)};
+    TRUE  // Always return TRUE for blocking lock
+}
+
+#[allow(dead_code)]
+pub unsafe fn TryAcquireSRWLockShared(srwlock: *mut SRWLOCK) -> BOOLEAN {
+    unsafe {AcquireSRWLockShared(srwlock)};
+    TRUE  // Always return TRUE for blocking lock
 }
 
 // Use raw-dylib to import ProcessPrng as we can't rely on there being an import library.
