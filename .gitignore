@@ -18,7 +18,6 @@ __pycache__/
 /*-*-*/
 /Makefile
 /build
-/config.toml
 /dist/
 /dl/
 /doc
