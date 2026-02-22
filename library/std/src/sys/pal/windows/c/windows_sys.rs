@@ -37,6 +37,13 @@ windows_targets::link!("kernel32.dll" "system" fn GetConsoleOutputCP() -> u32);
 windows_targets::link!("kernel32.dll" "system" fn GetCurrentDirectoryW(nbufferlength : u32, lpbuffer : PWSTR) -> u32);
 windows_targets::link!("kernel32.dll" "system" fn GetCurrentProcess() -> HANDLE);
 windows_targets::link!("kernel32.dll" "system" fn GetCurrentProcessId() -> u32);
+windows_targets::link!("kernel32.dll" "system" fn InitializeCriticalSection(CriticalSection: *mut CRITICAL_SECTION));
+windows_targets::link!("kernel32.dll" "system" fn EnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION));
+windows_targets::link!("kernel32.dll" "system" fn TryEnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION) -> BOOL);
+windows_targets::link!("kernel32.dll" "system" fn LeaveCriticalSection(CriticalSection: *mut CRITICAL_SECTION));
+windows_targets::link!("kernel32.dll" "system" fn DeleteCriticalSection(CriticalSection: *mut CRITICAL_SECTION));
+windows_targets::link!("kernel32.dll" "system" fn SetEvent(hEvent : HANDLE) -> BOOL);
+windows_targets::link!("kernel32.dll" "system" fn ResetEvent(hEvent : HANDLE) -> BOOL);
 windows_targets::link!("kernel32.dll" "system" fn GetCurrentThread() -> HANDLE);
 windows_targets::link!("kernel32.dll" "system" fn GetEnvironmentStringsW() -> PWSTR);
 windows_targets::link!("kernel32.dll" "system" fn GetEnvironmentVariableW(lpname : PCWSTR, lpbuffer : PWSTR, nsize : u32) -> u32);
@@ -2995,6 +3002,17 @@ pub const SPECIFIC_RIGHTS_ALL: FILE_ACCESS_RIGHTS = 65535u32;
 pub struct SRWLOCK {
     pub Ptr: *mut core::ffi::c_void,
 }
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct CRITICAL_SECTION {
+    CriticalSectionDebug: *mut core::ffi::c_void,
+    LockCount: i32,
+    RecursionCount: i32,
+    OwningThread: HANDLE,
+    LockSemaphore: HANDLE,
+    SpinCount: usize,
+}
+
 pub const STACK_SIZE_PARAM_IS_A_RESERVATION: THREAD_CREATION_FLAGS = 65536u32;
 pub const STANDARD_RIGHTS_ALL: FILE_ACCESS_RIGHTS = 2031616u32;
 pub const STANDARD_RIGHTS_EXECUTE: FILE_ACCESS_RIGHTS = 131072u32;

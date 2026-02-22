@@ -180,6 +180,20 @@ macro_rules! compat_fn_with_fallback {
                 $fallback_body
             }
 
+            #[allow(dead_code)]
+            pub fn is_available() -> bool {
+                let mut ptr = PTR.load(Ordering::Relaxed);
+                if ptr == load as *mut _ {
+                    ptr = load_from_module(unsafe { Module::new($module) }) as *mut _;
+                }
+
+                if ptr != fallback as *mut _ {
+                    true
+                } else {
+                    false
+                }
+            }
+
             #[inline(always)]
             pub unsafe fn call($($argname: $argtype),*) -> $rettype {
                 unsafe {
