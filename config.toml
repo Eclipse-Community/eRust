@@ -1,0 +1,64 @@
+changelog-seen = 2
+
+[llvm]
+# They deleted llvm wtf
+download-ci-llvm = false
+optimize = true
+thin-lto = false
+link-shared = false
+ninja = true
+targets = "X86"
+link-jobs = 0
+cflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
+cxxflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
+ldflags = "-Wl,-O3 -msse2"
+polly = true
+clang-cl = "C:/Program Files/LLVM/bin/clang-cl.exe"
+version-suffix = "-eRust-dev"
+
+[build]
+build-stage = 2
+cargo-native-static = false
+# When compiling from source, you usually want all tools.
+#extended = true
+build = "x86_64-pc-windows-msvc"
+target = [
+    "i686-pc-windows-msvc",
+    "x86_64-pc-windows-msvc",
+]
+
+docs = true
+extended = true
+tools = [
+    "cargo",
+    "rustfmt",
+]
+#verbose = 1
+
+[rust]
+channel = "dev"
+codegen-backends = ["llvm"]
+codegen-units = 1
+codegen-units-std = 1
+debug = false
+dist-src = false
+download-rustc = false
+#jemalloc = true
+lld = true
+#lto = "thin"
+optimize = true
+optimize-tests = true
+thin-lto-import-instr-limit = 100
+use-lld = true
+description = "eRust"
+debuginfo-level = 0
+debug-assertions = false
+
+# for creating a downloadable package: python x.py dist.
+[dist]
+src-tarball = false
+missing-tools = true
+
+[install]
+prefix = "../dist/rust"
+sysconfdir = "."
