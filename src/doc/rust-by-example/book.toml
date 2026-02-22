@@ -1,0 +1,30 @@
+[book]
+title = "Rust By Example"
+description = "Rust by Example (RBE) is a collection of runnable examples that illustrate various Rust concepts and standard libraries."
+authors = ["The Rust Community"]
+
+[output.html.playpen]
+editable = true
+line-numbers = true
+
+[output.html.fold]
+enable = true
+
+[output.html]
+git-repository-url = "https://github.com/rust-lang/rust-by-example"
+edit-url-template = "https://github.com/rust-lang/rust-by-example/edit/master/{path}"
+hash-files = true
+additional-css = [
+  "theme/css/language-picker.css",
+]
+additional-js = ["theme/js/language-picker.js"]
+
+[rust]
+edition = "2021"
+
+[build]
+extra-watch-dirs = ["po"]
+
+[preprocessor.gettext]
+optional = true
+after = ["links"]
