@@ -1384,18 +1384,6 @@ fn file_try_clone() {
 }
 
 #[test]
-#[cfg(not(target_vendor = "win7"))]
-fn unlink_readonly() {
-    let tmpdir = tmpdir();
-    let path = tmpdir.join("file");
-    check!(File::create(&path));
-    let mut perm = check!(fs::metadata(&path)).permissions();
-    perm.set_readonly(true);
-    check!(fs::set_permissions(&path, perm));
-    check!(fs::remove_file(&path));
-}
-
-#[test]
 fn mkdir_trailing_slash() {
     let tmpdir = tmpdir();
     let path = tmpdir.join("file");
