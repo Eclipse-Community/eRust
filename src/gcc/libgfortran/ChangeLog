@@ -1,0 +1,34 @@
+2024-02-03  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR libfortran/111022
+	* io/format.c (get_fnode): Update initialization of fnode.
+	(parse_format_list): Initialization.
+	* io/format.h (struct fnode): Added the new 'pushed' component.
+	* io/write.c (select_buffer): Whitespace.
+	(write_real): Whitespace.
+	(write_real_w0): Adjust logic for the d == 0 condition.
+	* io/write_float.def (determine_precision): Whitespace.
+	(build_float_string): Calculate width of ..E0 exponents and
+	adjust logic accordingly.
+	(build_infnan_string): Whitespace.
+	(CALCULATE_EXP): Whitespace.
+	(quadmath_snprintf): Whitespace.
+	(determine_en_precision): Whitespace.
+
+2024-01-15  Lipeng Zhu  <lipeng.zhu@intel.com>
+
+	* io/io.h (dec_waiting_unlocked): Use
+	__gthread_rwlock_wrlock/__gthread_rwlock_unlock or
+	__gthread_mutex_lock/__gthread_mutex_unlock functions
+	to replace WRLOCK and RWUNLOCK macros.
+
+2024-01-07  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	* io/write.c (namelist_write): If internal_unit precede with space.
+
+
+Copyright (C) 2024 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.

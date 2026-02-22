@@ -1,0 +1,26 @@
+[package]
+name = "benchlib"
+version = "0.1.0"
+edition = "2021"
+description = "Library for defining and measuring benchmarks of Rust code"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive", "string"] }
+env_logger = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+libc = "0.2"
+flate2 = { version = "1", optional = true }
+crabgrind = { version = "0.1.10", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+perf-event = "0.4.7"
+
+[features]
+compression = ["dep:flate2"]
+precise-cachegrind = ["dep:crabgrind"]

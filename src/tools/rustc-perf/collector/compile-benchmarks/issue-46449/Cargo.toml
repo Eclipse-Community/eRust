@@ -1,0 +1,8 @@
+[package]
+name = "issue-46449-byte-filling-slowing-down-sroa"
+version = "0.1.0"
+
+[dependencies]
+futures = "=0.1.17"
+
+[workspace]
