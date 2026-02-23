@@ -1548,18 +1548,6 @@ fn file_try_clone() {
 }
 
 #[test]
-#[cfg(not(target_vendor = "win7"))]
-fn unlink_readonly() {
-    let tmpdir = tmpdir();
-    let path = tmpdir.join("file");
-    check!(File::create(&path));
-    let mut perm = check!(fs::metadata(&path)).permissions();
-    perm.set_readonly(true);
-    check!(fs::set_permissions(&path, perm));
-    check!(fs::remove_file(&path));
-}
-
-#[test]
 fn mkdir_trailing_slash() {
     let tmpdir = tmpdir();
     let path = tmpdir.join("file");
@@ -1900,19 +1888,16 @@ fn test_eq_windows_file_type() {
     let mut perms = file1.metadata().unwrap().permissions();
     perms.set_readonly(true);
     file1.set_permissions(perms.clone()).unwrap();
-    #[cfg(target_vendor = "win7")]
     let _g = ReadonlyGuard { file: &file1, perms };
     assert_eq!(file1.metadata().unwrap().file_type(), file2.metadata().unwrap().file_type());
 
     // Reset the attribute before the `TmpDir`'s drop that removes the
     // associated directory, which fails with a `PermissionDenied` error when
     // running under Windows 7.
-    #[cfg(target_vendor = "win7")]
     struct ReadonlyGuard<'f> {
         file: &'f File,
         perms: fs::Permissions,
     }
-    #[cfg(target_vendor = "win7")]
     impl<'f> Drop for ReadonlyGuard<'f> {
         fn drop(&mut self) {
             self.perms.set_readonly(false);
@@ -2124,7 +2109,6 @@ fn test_hidden_file_truncation() {
 // these two tests are disabled under Windows 7 here.
 #[cfg(windows)]
 #[test]
-#[cfg_attr(target_vendor = "win7", ignore = "Unsupported under Windows 7.")]
 fn test_rename_file_over_open_file() {
     // Make sure that std::fs::rename works if the target file is already opened with FILE_SHARE_DELETE. See #123985.
     let tmpdir = tmpdir();
@@ -2149,7 +2133,6 @@ fn test_rename_file_over_open_file() {
 
 #[test]
 #[cfg(windows)]
-#[cfg_attr(target_vendor = "win7", ignore = "Unsupported under Windows 7.")]
 fn test_rename_directory_to_non_empty_directory() {
     // Renaming a directory over a non-empty existing directory should fail on Windows.
     let tmpdir: TempDir = tmpdir();

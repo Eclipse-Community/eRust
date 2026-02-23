@@ -1,6 +1,5 @@
 cfg_select! {
     any(
-        all(target_os = "windows", not(target_vendor = "win7")),
         target_os = "linux",
         target_os = "android",
         target_os = "freebsd",
@@ -24,7 +23,7 @@ cfg_select! {
         mod pthread;
         pub use pthread::Mutex;
     }
-    all(target_os = "windows", target_vendor = "win7") => {
+    target_os = "windows" => {
         mod windows7;
         pub use windows7::{Mutex, raw};
     }

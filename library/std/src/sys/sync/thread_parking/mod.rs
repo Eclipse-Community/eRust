@@ -1,6 +1,5 @@
 cfg_select! {
     any(
-        all(target_os = "windows", not(target_vendor = "win7")),
         target_os = "linux",
         target_os = "android",
         all(target_arch = "wasm32", target_feature = "atomics"),
@@ -22,7 +21,7 @@ cfg_select! {
         mod id;
         pub use id::Parker;
     }
-    target_vendor = "win7" => {
+    target_os = "windows" => {
         mod windows7;
         pub use windows7::Parker;
     }
