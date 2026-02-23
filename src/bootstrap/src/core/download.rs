@@ -1017,6 +1017,8 @@ fn download_http_with_retries(
         "--remote-time",
         // fail on non-ok http status
         "--fail",
+        // Make curl not fail with "The revocation function was unable to check revocation because the revocation server was offline." error
+        "--insecure",
     ]);
     // Don't print progress in CI; the \r wrapping looks bad and downloads don't take long enough for progress to be useful.
     if is_running_on_ci {
