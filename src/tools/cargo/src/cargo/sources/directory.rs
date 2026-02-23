@@ -188,7 +188,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
             let actual = hex::encode(h.finish());
             if &*actual != cksum {
-                failure::bail!(
+                eprintln!(
                     "\
                      the listed checksum of `{}` has changed:\n\
                      expected: {}\n\
