@@ -436,8 +436,6 @@ impl Build {
                     ),
                 );
             }
-            // Now, update all existing submodules.
-            build.update_existing_submodules();
 
             build.verbose(|| println!("learning about cargo"));
             crate::core::metadata::build(&mut build);
@@ -506,33 +504,6 @@ impl Build {
         for submodule in build_helper::util::parse_gitmodules(&self.src) {
             self.require_submodule(submodule, None);
         }
-    }
-
-    /// If any submodule has been initialized already, sync it unconditionally.
-    /// This avoids contributors checking in a submodule change by accident.
-    fn update_existing_submodules(&self) {
-        // Avoid running git when there isn't a git checkout, or the user has
-        // explicitly disabled submodules in `config.toml`.
-        if !self.config.submodules() {
-            return;
-        }
-        let output = helpers::git(Some(&self.src))
-            .args(["config", "--file"])
-            .arg(".gitmodules")
-            .args(["--get-regexp", "path"])
-            .run_capture(self)
-            .stdout();
-        std::thread::scope(|s| {
-            // Look for `submodule.$name.path = $path`
-            // Sample output: `submodule.src/rust-installer.path src/tools/rust-installer`
-            for line in output.lines() {
-                let submodule = line.split_once(' ').unwrap().1;
-                let config = self.config.clone();
-                s.spawn(move || {
-                    Self::update_existing_submodule(&config, submodule);
-                });
-            }
-        });
     }
 
     /// Updates the given submodule only if it's initialized already; nothing happens otherwise.
