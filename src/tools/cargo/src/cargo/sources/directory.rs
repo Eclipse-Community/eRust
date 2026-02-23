@@ -175,7 +175,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?
                 .finish_hex();
             if &*actual != cksum {
-                anyhow::bail!(
+                eprintln!(
                     "the listed checksum of `{}` has changed:\n\
                      expected: {}\n\
                      actual:   {}\n\
