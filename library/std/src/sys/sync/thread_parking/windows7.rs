@@ -110,7 +110,6 @@ impl Parker {
             return;
         }
 
-        #[cfg(target_vendor = "win7")]
         if c::WaitOnAddress::option().is_none() {
             return keyed_events::park(self);
         }
@@ -138,7 +137,6 @@ impl Parker {
             return;
         }
 
-        #[cfg(target_vendor = "win7")]
         if c::WaitOnAddress::option().is_none() {
             return keyed_events::park_timeout(self, timeout);
         }
@@ -168,7 +166,6 @@ impl Parker {
         // with park().
         if self.state.swap(NOTIFIED, Release) == PARKED {
             unsafe {
-                #[cfg(target_vendor = "win7")]
                 if c::WakeByAddressSingle::option().is_none() {
                     return keyed_events::unpark(self);
                 }
@@ -182,7 +179,6 @@ impl Parker {
     }
 }
 
-#[cfg(target_vendor = "win7")]
 mod keyed_events {
     use core::pin::Pin;
     use core::ptr;

@@ -1,6 +1,5 @@
 cfg_if::cfg_if! {
     if #[cfg(any(
-        all(target_os = "windows", not(target_vendor = "win7")),
         target_os = "linux",
         target_os = "android",
         all(target_arch = "wasm32", target_feature = "atomics"),
@@ -19,7 +18,7 @@ cfg_if::cfg_if! {
     ))] {
         mod id;
         pub use id::Parker;
-    } else if #[cfg(target_vendor = "win7")] {
+    } else if #[cfg(target_os = "windows")] {
         mod windows7;
         pub use windows7::Parker;
     } else if #[cfg(all(target_vendor = "apple", not(miri)))] {

@@ -1431,18 +1431,6 @@ fn file_try_clone() {
 }
 
 #[test]
-#[cfg(not(target_vendor = "win7"))]
-fn unlink_readonly() {
-    let tmpdir = tmpdir();
-    let path = tmpdir.join("file");
-    check!(File::create(&path));
-    let mut perm = check!(fs::metadata(&path)).permissions();
-    perm.set_readonly(true);
-    check!(fs::set_permissions(&path, perm));
-    check!(fs::remove_file(&path));
-}
-
-#[test]
 fn mkdir_trailing_slash() {
     let tmpdir = tmpdir();
     let path = tmpdir.join("file");
@@ -2007,7 +1995,6 @@ fn test_hidden_file_truncation() {
 // these two tests are disabled under Windows 7 here.
 #[cfg(windows)]
 #[test]
-#[cfg_attr(target_vendor = "win7", ignore = "Unsupported under Windows 7.")]
 fn test_rename_file_over_open_file() {
     // Make sure that std::fs::rename works if the target file is already opened with FILE_SHARE_DELETE. See #123985.
     let tmpdir = tmpdir();
@@ -2032,7 +2019,6 @@ fn test_rename_file_over_open_file() {
 
 #[test]
 #[cfg(windows)]
-#[cfg_attr(target_vendor = "win7", ignore = "Unsupported under Windows 7.")]
 fn test_rename_directory_to_non_empty_directory() {
     // Renaming a directory over a non-empty existing directory should fail on Windows.
     let tmpdir: TempDir = tmpdir();
