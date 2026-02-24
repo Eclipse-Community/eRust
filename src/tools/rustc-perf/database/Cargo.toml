@@ -1,0 +1,29 @@
+[package]
+name = "database"
+version = "0.1.0"
+authors = ["Mark Rousskov <mark.simulacrum@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+clap = { workspace = true, features = ["cargo"] }
+env_logger = { workspace = true }
+hashbrown = { workspace = true, features = ["serde"] }
+log = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["sync", "macros", "rt-multi-thread"] }
+
+rusqlite = { version = "0.28", features = ["bundled"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "runtime"] }
+async-trait = "0.1"
+postgres-native-tls = "0.5"
+native-tls = "0.2"
+futures-util = "0.3.5"
+bytes = "1"
+csv = "1"
+x509-cert = { version = "0.2.5", features = ["pem"] }
+
+intern = { path = "../intern" }
+uuid = { version = "1.16.0", features = ["v4"] }

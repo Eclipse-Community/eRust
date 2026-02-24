@@ -1,0 +1,7 @@
+[book]
+authors = ["James Munns"]
+src = "src"
+title = "The Embedded Rust Book"
+
+[output.html]
+git-repository-url = "https://github.com/rust-embedded/book"
