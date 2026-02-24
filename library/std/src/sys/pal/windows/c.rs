@@ -19,7 +19,9 @@ pub const INVALID_HANDLE_VALUE: HANDLE = ::core::ptr::without_provenance_mut(-1i
 pub const EXIT_SUCCESS: u32 = 0;
 pub const EXIT_FAILURE: u32 = 1;
 
+#[allow(dead_code)]
 pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE { Ptr: ptr::null_mut() };
+#[allow(dead_code)]
 pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { Ptr: ptr::null_mut() };
 #[cfg(not(target_thread_local))]
 pub const INIT_ONCE_STATIC_INIT: INIT_ONCE = INIT_ONCE { Ptr: ptr::null_mut() };
@@ -122,6 +124,42 @@ windows_targets::link!("ntdll.dll" "system" fn NtCreateNamedPipeFile(
 compat_fn_with_fallback! {
     pub static KERNEL32: &CStr = c"kernel32";
 
+    pub fn SetThreadErrorMode(_dwNewMode: u32,
+                              _lpOldMode: *mut u32) -> c_uint {
+        unsafe { SetLastError(ERROR_CALL_NOT_IMPLEMENTED as u32); 0 }
+    }
+    pub fn SleepConditionVariableSRW(ConditionVariable: *mut CONDITION_VARIABLE,
+                                     SRWLock: *mut SRWLOCK,
+                                     dwMilliseconds: u32,
+                                     Flags: u32) -> BOOL {
+        panic!("condition variables not available")
+    }
+    pub fn WakeConditionVariable(ConditionVariable: *mut CONDITION_VARIABLE)
+                                 -> () {
+        panic!("condition variables not available")
+    }
+    pub fn WakeAllConditionVariable(ConditionVariable: *mut CONDITION_VARIABLE)
+                                    -> () {
+        panic!("condition variables not available")
+    }
+    pub fn AcquireSRWLockExclusive(SRWLock: *mut SRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn AcquireSRWLockShared(SRWLock: *mut SRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn ReleaseSRWLockExclusive(SRWLock: *mut SRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn ReleaseSRWLockShared(SRWLock: *mut SRWLOCK) -> () {
+        panic!("rwlocks not available")
+    }
+    pub fn TryAcquireSRWLockExclusive(SRWLock: *mut SRWLOCK) -> bool {
+        panic!("rwlocks not available")
+    }
+    pub fn TryAcquireSRWLockShared(SRWLock: *mut SRWLOCK) -> bool {
+        panic!("rwlocks not available")
+    }
     // >= Win10 1607
     // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
     pub fn SetThreadDescription(hthread: HANDLE, lpthreaddescription: PCWSTR) -> HRESULT {
