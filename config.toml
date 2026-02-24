@@ -1,4 +1,4 @@
-change-id = 118703
+change-id = 136941
 
 [llvm]
 # They deleted llvm wtf
@@ -15,6 +15,7 @@ ldflags = "-Wl,-O3 -msse2"
 polly = true
 clang = true
 clang-cl = "C:/Program Files/LLVM/bin/clang-cl.exe"
+version-suffix = "-eRust-dev"
 
 [build]
 build-stage = 2
@@ -29,8 +30,12 @@ target = [
 
 docs = false
 tools = [
+    "cargo",
     "src",
 ]
+optimized-compiler-builtins = true
+#verbose = 1
+jobs = 0
 
 [rust]
 channel = "dev"
@@ -49,6 +54,9 @@ optimize-tests = true
 thin-lto-import-instr-limit = 100
 validate-mir-opts = 3
 use-lld = "self-contained"
+description = "eRust"
+debuginfo-level = 0
+debug-assertions = false
 
 # for creating a downloadable package: python x.py dist.
 [dist]
