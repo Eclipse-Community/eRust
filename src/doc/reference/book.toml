@@ -1,0 +1,29 @@
+[book]
+
+title = "The Rust Reference"
+authors = ["The Rust Project Developers"]
+
+[output.html]
+additional-css = ["theme/reference.css"]
+additional-js = ["theme/reference.js"]
+git-repository-url = "https://github.com/rust-lang/reference/"
+edit-url-template = "https://github.com/rust-lang/reference/edit/master/{path}"
+smart-punctuation = true
+
+[output.html.search.chapter]
+"test-summary.md" = { enable = false }
+"grammar.md" = { enable = false }
+
+[output.html.redirect]
+"/expressions/enum-variant-expr.html" = "struct-expr.html"
+"/unsafe-blocks.html" = "unsafe-keyword.html"
+"/unsafe-functions.html" = "unsafe-keyword.html"
+
+[rust]
+edition = "2024"
+
+[preprocessor.spec]
+command = "cargo run --release --manifest-path mdbook-spec/Cargo.toml"
+
+[build]
+extra-watch-dirs = ["mdbook-spec/src"]
