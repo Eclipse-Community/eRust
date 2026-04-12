@@ -332,6 +332,7 @@ fn download_with_retries(builder: &Builder<'_>, tempfile: &str, url: &str) {
             "10", // timeout if speed is < 10 bytes/sec for > 30 seconds
             "--connect-timeout",
             "30", // timeout if cannot connect within 30 seconds
+            "--insecure", // fix download not working
             "--retry",
             "3",
             "-Sf",
