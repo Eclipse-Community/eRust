@@ -1,0 +1,20 @@
+[package]
+name = "cfg"
+version = "0.0.0"
+description = "TBD"
+license = "MIT OR Apache-2.0"
+authors = ["rust-analyzer developers"]
+edition = "2018"
+
+[lib]
+doctest = false
+
+[dependencies]
+rustc-hash = "1.1.0"
+
+tt = { path = "../tt", version = "0.0.0" }
+
+[dev-dependencies]
+mbe = { path = "../mbe" }
+syntax = { path = "../syntax" }
+expect-test = "1.1"

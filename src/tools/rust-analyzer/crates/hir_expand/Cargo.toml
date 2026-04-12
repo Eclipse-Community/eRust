@@ -1,0 +1,28 @@
+[package]
+name = "hir_expand"
+version = "0.0.0"
+description = "TBD"
+license = "MIT OR Apache-2.0"
+authors = ["rust-analyzer developers"]
+edition = "2018"
+
+[lib]
+doctest = false
+
+[dependencies]
+log = "0.4.8"
+either = "1.5.3"
+rustc-hash = "1.0.0"
+la-arena = { version = "0.2.0", path = "../../lib/arena" }
+
+base_db = { path = "../base_db", version = "0.0.0" }
+cfg = { path = "../cfg", version = "0.0.0" }
+syntax = { path = "../syntax", version = "0.0.0" }
+parser = { path = "../parser", version = "0.0.0" }
+profile = { path = "../profile", version = "0.0.0" }
+tt = { path = "../tt", version = "0.0.0" }
+mbe = { path = "../mbe", version = "0.0.0" }
+
+[dev-dependencies]
+test_utils = { path = "../test_utils" }
+expect-test = "1.1"

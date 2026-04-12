@@ -1,0 +1,29 @@
+[package]
+name = "proc_macro_srv"
+version = "0.0.0"
+description = "TBD"
+license = "MIT OR Apache-2.0"
+authors = ["rust-analyzer developers"]
+edition = "2018"
+
+[lib]
+doctest = false
+
+[dependencies]
+object = { version = "0.23", default-features = false, features = ["std", "read_core", "elf", "macho", "pe"] }
+libloading = "0.7.0"
+memmap2 = "0.2.0"
+
+tt = { path = "../tt", version = "0.0.0" }
+mbe = { path = "../mbe", version = "0.0.0" }
+proc_macro_api = { path = "../proc_macro_api", version = "0.0.0" }
+
+[dev-dependencies]
+test_utils = { path = "../test_utils" }
+cargo_metadata = "0.13"
+
+# used as proc macro test targets
+serde_derive = "1.0.106"
+proc_macro_test = { path = "../proc_macro_test" }
+
+toolchain = { path = "../toolchain" }
