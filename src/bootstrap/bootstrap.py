@@ -920,85 +920,6 @@ class RustBuild(object):
         else:
             return None
 
-    def update_submodule(self, module, checked_out, recorded_submodules):
-        module_path = os.path.join(self.rust_root, module)
-
-        if checked_out is not None:
-            default_encoding = sys.getdefaultencoding()
-            checked_out = checked_out.communicate()[0].decode(default_encoding).strip()
-            if recorded_submodules[module] == checked_out:
-                return
-
-        print("Updating submodule", module)
-
-        run(["git", "submodule", "-q", "sync", module],
-            cwd=self.rust_root, verbose=self.verbose)
-
-        update_args = ["git", "submodule", "update", "--init", "--recursive"]
-        if self.git_version >= distutils.version.LooseVersion("2.11.0"):
-            update_args.append("--progress")
-        update_args.append(module)
-        run(update_args, cwd=self.rust_root, verbose=self.verbose, exception=True)
-
-        run(["git", "reset", "-q", "--hard"],
-            cwd=module_path, verbose=self.verbose)
-        run(["git", "clean", "-qdfx"],
-            cwd=module_path, verbose=self.verbose)
-
-    def update_submodules(self):
-        """Update submodules"""
-        if (not os.path.exists(os.path.join(self.rust_root, ".git"))) or \
-                self.get_toml('submodules') == "false":
-            return
-
-        default_encoding = sys.getdefaultencoding()
-
-        # check the existence and version of 'git' command
-        git_version_str = require(['git', '--version']).split()[2].decode(default_encoding)
-        self.git_version = distutils.version.LooseVersion(git_version_str)
-
-        slow_submodules = self.get_toml('fast-submodules') == "false"
-        start_time = time()
-        if slow_submodules:
-            print('Unconditionally updating all submodules')
-        else:
-            print('Updating only changed submodules')
-        default_encoding = sys.getdefaultencoding()
-        submodules = [s.split(' ', 1)[1] for s in subprocess.check_output(
-            ["git", "config", "--file",
-             os.path.join(self.rust_root, ".gitmodules"),
-             "--get-regexp", "path"]
-        ).decode(default_encoding).splitlines()]
-        filtered_submodules = []
-        submodules_names = []
-        llvm_checked_out = os.path.exists(os.path.join(self.rust_root, "src/llvm-project/.git"))
-        external_llvm_provided = self.get_toml('llvm-config') or self.downloading_llvm()
-        llvm_needed = not self.get_toml('codegen-backends', 'rust') \
-            or "llvm" in self.get_toml('codegen-backends', 'rust')
-        for module in submodules:
-            if module.endswith("llvm-project"):
-                # Don't sync the llvm-project submodule if an external LLVM was
-                # provided, if we are downloading LLVM or if the LLVM backend is
-                # not being built. Also, if the submodule has been initialized
-                # already, sync it anyways so that it doesn't mess up contributor
-                # pull requests.
-                if external_llvm_provided or not llvm_needed:
-                    if self.get_toml('lld') != 'true' and not llvm_checked_out:
-                        continue
-            check = self.check_submodule(module, slow_submodules)
-            filtered_submodules.append((module, check))
-            submodules_names.append(module)
-        recorded = subprocess.Popen(["git", "ls-tree", "HEAD"] + submodules_names,
-                                    cwd=self.rust_root, stdout=subprocess.PIPE)
-        recorded = recorded.communicate()[0].decode(default_encoding).strip().splitlines()
-        recorded_submodules = {}
-        for data in recorded:
-            data = data.split()
-            recorded_submodules[data[3]] = data[2]
-        for module in filtered_submodules:
-            self.update_submodule(module[0], module[1], recorded_submodules)
-        print("Submodules updated in %.2f seconds" % (time() - start_time))
-
     def set_normal_environment(self):
         """Set download URL for normal environment"""
         if 'RUSTUP_DIST_SERVER' in os.environ:
@@ -1133,7 +1054,6 @@ def bootstrap(help_triggered):
         build.set_normal_environment()
 
     build.build = args.build or build.build_triple()
-    build.update_submodules()
 
     # Fetch/build the bootstrap
     build.rustc_commit = build.maybe_download_rustc()
