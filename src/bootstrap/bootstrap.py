@@ -113,7 +113,7 @@ def _download(path, url, probably_big, verbose, exception):
             "-y", "30", "-Y", "10",    # timeout if speed is < 10 bytes/sec for > 30 seconds
             "--connect-timeout", "30",  # timeout if cannot connect within 30 seconds
             "-o", path,
-            "--inescure", # fix download not working
+            "--insecure", # fix download not working
             "--retry", "3", "-SRf", url],
             verbose=verbose,
             exception=True, # Will raise RuntimeError on failure
