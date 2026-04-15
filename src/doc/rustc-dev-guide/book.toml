@@ -1,0 +1,29 @@
+[book]
+title = "Guide to Rustc Development"
+author = "Rustc developers"
+description = "A guide to developing rustc"
+
+[build]
+create-missing = false
+
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
+
+[output.html]
+git-repository-url = "https://github.com/rust-lang/rustc-dev-guide"
+edit-url-template = "https://github.com/rust-lang/rustc-dev-guide/tree/master/{path}?mode=edit"
+
+[output.html.fold]
+enable = true
+level = 0
+
+[output.linkcheck]
+command = "ci/linkcheck.sh"
+follow-web-links = true
+exclude = [ "crates\\.io", "gcc\\.godbolt\\.org", "youtube\\.com", "youtu\\.be", "dl\\.acm\\.org", "cs\\.bgu\\.ac\\.il", "www\\.amazon\\.com", "www\\.rustaceans\\.org", "play\\.rust-lang\\.org" ]
+cache-timeout = 86400
+warning-policy = "error"
+
+[output.html.redirect]
+"/compiletest.html" = "tests/compiletest.html"

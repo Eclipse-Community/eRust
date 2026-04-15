@@ -1,0 +1,6 @@
+target
+/doc
+tex/*/out
+*.dot
+*.rs.bk
+.vscode
