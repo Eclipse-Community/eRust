@@ -65,7 +65,7 @@ impl SystemTime {
     pub fn now() -> SystemTime {
         unsafe {
             let mut t: SystemTime = mem::zeroed();
-            c::GetSystemTimePreciseAsFileTime(&mut t.t);
+            c::GetSystemTimeAsFileTime(&mut t.t);
             t
         }
     }
