@@ -29,9 +29,10 @@ target = [
 ]
 
 docs = false
+extended = true
 tools = [
     "cargo",
-    "src",
+    "rustfmt",
 ]
 optimized-compiler-builtins = true
 #verbose = 1
@@ -62,6 +63,7 @@ debug-assertions = false
 [dist]
 src-tarball = false
 compression-profile = "best"
+missing-tools = true
 
 [install]
 prefix = "../dist/rust"
