@@ -462,8 +462,6 @@ impl Build {
             for s in rust_submodules {
                 build.update_submodule(Path::new(s));
             }
-            // Now, update all existing submodules.
-            build.update_existing_submodules();
 
             build.verbose("learning about cargo");
             crate::core::metadata::build(&mut build);
@@ -598,31 +596,6 @@ impl Build {
 
         if has_local_modifications {
             self.run(Command::new("git").args(&["stash", "pop"]).current_dir(absolute_path));
-        }
-    }
-
-    /// If any submodule has been initialized already, sync it unconditionally.
-    /// This avoids contributors checking in a submodule change by accident.
-    pub fn update_existing_submodules(&self) {
-        // Avoid running git when there isn't a git checkout.
-        if !self.config.submodules(&self.rust_info()) {
-            return;
-        }
-        let output = output(
-            self.config
-                .git()
-                .args(&["config", "--file"])
-                .arg(&self.config.src.join(".gitmodules"))
-                .args(&["--get-regexp", "path"]),
-        );
-        for line in output.lines() {
-            // Look for `submodule.$name.path = $path`
-            // Sample output: `submodule.src/rust-installer.path src/tools/rust-installer`
-            let submodule = Path::new(line.splitn(2, ' ').nth(1).unwrap());
-            // Don't update the submodule unless it's already been cloned.
-            if GitInfo::new(false, submodule).is_managed_git_subrepository() {
-                self.update_submodule(submodule);
-            }
         }
     }
 
