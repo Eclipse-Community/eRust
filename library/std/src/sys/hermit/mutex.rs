@@ -213,4 +213,7 @@ impl Mutex {
         }
         guard.locked
     }
+
+    #[inline]
+    pub unsafe fn destroy(&self) {}
 }
