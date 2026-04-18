@@ -36,7 +36,6 @@ tools = [
 ]
 optimized-compiler-builtins = true
 #verbose = 1
-jobs = 0
 
 [rust]
 channel = "dev"
