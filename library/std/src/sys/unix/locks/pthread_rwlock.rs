@@ -151,7 +151,7 @@ impl RwLock {
         self.raw_unlock();
     }
     #[inline]
-    unsafe fn destroy(&mut self) {
+    pub unsafe fn destroy(&self) {
         let r = libc::pthread_rwlock_destroy(self.inner.get());
         // On DragonFly pthread_rwlock_destroy() returns EINVAL if called on a
         // rwlock that was just initialized with
@@ -162,12 +162,5 @@ impl RwLock {
         } else {
             debug_assert_eq!(r, 0);
         }
-    }
-}
-
-impl Drop for RwLock {
-    #[inline]
-    fn drop(&mut self) {
-        unsafe { self.destroy() };
     }
 }

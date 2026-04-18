@@ -54,4 +54,9 @@ impl Mutex {
     pub unsafe fn unlock(&self) {
         c::ReleaseSRWLockExclusive(raw(self));
     }
+
+    #[inline]
+    pub unsafe fn destroy(&self) {
+        // SRWLock does not need to be destroyed.
+    }
 }

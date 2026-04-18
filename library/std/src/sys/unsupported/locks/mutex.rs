@@ -33,4 +33,7 @@ impl Mutex {
     pub unsafe fn try_lock(&self) -> bool {
         self.locked.replace(true) == false
     }
+
+    #[inline]
+    pub unsafe fn destroy(&self) {}
 }
