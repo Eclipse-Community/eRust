@@ -6,7 +6,6 @@ pub struct Condvar {}
 pub type MovableCondvar = Condvar;
 
 impl Condvar {
-    #[inline]
     pub const fn new() -> Condvar {
         Condvar {}
     }
