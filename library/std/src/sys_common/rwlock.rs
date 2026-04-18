@@ -17,7 +17,7 @@ impl MovableRwLock {
     #[inline]
     #[rustc_const_stable(feature = "const_locks", since = "1.63.0")]
     pub const fn new() -> Self {
-        Self(imp::MovableRwLock::new())
+        Self(imp::MovableRwLock::from(imp::RwLock::new()))
     }
 
     /// Acquires shared access to the underlying lock, blocking the current

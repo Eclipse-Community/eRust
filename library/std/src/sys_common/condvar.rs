@@ -17,7 +17,9 @@ impl Condvar {
     #[inline]
     #[rustc_const_stable(feature = "const_locks", since = "1.63.0")]
     pub const fn new() -> Self {
-        Self { inner: imp::MovableCondvar::new(), check: CondvarCheck::new() }
+        let mut c = imp::MovableCondvar::from(imp::Condvar::new());
+        unsafe { c.init() };
+        Self { inner: c, check: CondvarCheck::new() }
     }
 
     /// Signals one waiter on this condition variable to wake up.

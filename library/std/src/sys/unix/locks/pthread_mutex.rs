@@ -1,13 +1,12 @@
 use crate::cell::UnsafeCell;
-use crate::mem::{forget, MaybeUninit};
+use crate::mem::{MaybeUninit};
 use crate::sys::cvt_nz;
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 
 pub struct Mutex {
     inner: UnsafeCell<libc::pthread_mutex_t>,
 }
 
-pub(crate) type MovableMutex = LazyBox<Mutex>;
+pub type MovableMutex = Box<Mutex>;
 
 #[inline]
 pub unsafe fn raw(m: &Mutex) -> *mut libc::pthread_mutex_t {
@@ -16,32 +15,6 @@ pub unsafe fn raw(m: &Mutex) -> *mut libc::pthread_mutex_t {
 
 unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
-
-impl LazyInit for Mutex {
-    fn init() -> Box<Self> {
-        let mut mutex = Box::new(Self::new());
-        unsafe { mutex.init() };
-        mutex
-    }
-
-    fn destroy(mutex: Box<Self>) {
-        // We're not allowed to pthread_mutex_destroy a locked mutex,
-        // so check first if it's unlocked.
-        if unsafe { mutex.try_lock() } {
-            unsafe { mutex.unlock() };
-            drop(mutex);
-        } else {
-            // The mutex is locked. This happens if a MutexGuard is leaked.
-            // In this case, we just leak the Mutex too.
-            forget(mutex);
-        }
-    }
-
-    fn cancel_init(_: Box<Self>) {
-        // In this case, we can just drop it without any checks,
-        // since it cannot have been locked yet.
-    }
-}
 
 impl Mutex {
     pub const fn new() -> Mutex {

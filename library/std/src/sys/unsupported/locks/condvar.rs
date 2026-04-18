@@ -13,6 +13,9 @@ impl Condvar {
     }
 
     #[inline]
+    pub unsafe fn init(&mut self) {}
+
+    #[inline]
     pub unsafe fn notify_one(&self) {}
 
     #[inline]

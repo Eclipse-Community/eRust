@@ -1,18 +1,11 @@
 use super::waitqueue::{try_lock_or_false, SpinMutex, WaitQueue, WaitVariable};
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 
 pub struct Mutex {
     inner: SpinMutex<WaitVariable<bool>>,
 }
 
 // not movable: see UnsafeList implementation
-pub(crate) type MovableMutex = LazyBox<Mutex>;
-
-impl LazyInit for Mutex {
-    fn init() -> Box<Self> {
-        Box::new(Self::new())
-    }
-}
+pub type MovableMutex = Box<Mutex>;
 
 // Implementation according to “Operating Systems: Three Easy Pieces”, chapter 28
 impl Mutex {

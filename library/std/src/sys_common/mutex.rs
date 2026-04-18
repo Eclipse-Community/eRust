@@ -19,7 +19,9 @@ impl MovableMutex {
     #[inline]
     #[rustc_const_stable(feature = "const_locks", since = "1.63.0")]
     pub const fn new() -> Self {
-        Self(imp::MovableMutex::new())
+        let mut mutex = imp::MovableMutex::from(imp::Mutex::new());
+        unsafe { mutex.init() };
+        Self(mutex)
     }
 
     pub(super) fn raw(&self) -> &imp::Mutex {
