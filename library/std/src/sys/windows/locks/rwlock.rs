@@ -39,4 +39,9 @@ impl RwLock {
     pub unsafe fn write_unlock(&self) {
         c::ReleaseSRWLockExclusive(self.inner.get())
     }
+
+    #[inline]
+    pub unsafe fn destroy(&self) {
+        // ...
+    }
 }

@@ -59,4 +59,7 @@ impl Mutex {
             true
         }
     }
+
+    #[inline]
+    pub unsafe fn destroy(&self) {}
 }

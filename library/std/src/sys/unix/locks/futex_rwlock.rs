@@ -70,6 +70,9 @@ impl RwLock {
     }
 
     #[inline]
+    pub unsafe fn destroy(&self) {}
+
+    #[inline]
     pub unsafe fn try_read(&self) -> bool {
         self.state
             .fetch_update(Acquire, Relaxed, |s| is_read_lockable(s).then(|| s + READ_LOCKED))
