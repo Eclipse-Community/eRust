@@ -15,7 +15,6 @@ unsafe impl Sync for StaticMutex {}
 
 impl StaticMutex {
     /// Creates a new mutex for use.
-    #[inline]
     pub const fn new() -> Self {
         Self(imp::Mutex::new())
     }
@@ -60,8 +59,7 @@ unsafe impl Sync for MovableMutex {}
 
 impl MovableMutex {
     /// Creates a new mutex.
-    #[inline]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         let mut mutex = imp::MovableMutex::from(imp::Mutex::new());
         unsafe { mutex.init() };
         Self(mutex)
