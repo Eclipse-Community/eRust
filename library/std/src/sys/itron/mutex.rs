@@ -26,7 +26,6 @@ fn new_mtx() -> Result<abi::ID, ItronError> {
 }
 
 impl Mutex {
-    #[inline]
     pub const fn new() -> Mutex {
         Mutex { mtx: SpinIdOnceCell::new() }
     }

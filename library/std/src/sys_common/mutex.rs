@@ -16,9 +16,7 @@ unsafe impl Sync for MovableMutex {}
 
 impl MovableMutex {
     /// Creates a new mutex.
-    #[inline]
-    #[rustc_const_stable(feature = "const_locks", since = "1.63.0")]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         let mut mutex = imp::MovableMutex::from(imp::Mutex::new());
         unsafe { mutex.init() };
         Self(mutex)
