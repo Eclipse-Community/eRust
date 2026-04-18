@@ -76,7 +76,7 @@ impl MovableRwLock {
     /// Creates a new reader-writer lock for use.
     #[inline]
     pub const fn new() -> Self {
-        Self(imp::MovableRwLock::new())
+        Self(imp::MovableRwLock::from(imp::RwLock::new()))
     }
 
     /// Acquires shared access to the underlying lock, blocking the current

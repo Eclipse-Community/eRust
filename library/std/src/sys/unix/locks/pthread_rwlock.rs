@@ -1,7 +1,5 @@
 use crate::cell::UnsafeCell;
-use crate::mem::forget;
 use crate::sync::atomic::{AtomicUsize, Ordering};
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 
 pub struct RwLock {
     inner: UnsafeCell<libc::pthread_rwlock_t>,
@@ -9,31 +7,10 @@ pub struct RwLock {
     num_readers: AtomicUsize,
 }
 
-pub(crate) type MovableRwLock = LazyBox<RwLock>;
+pub type MovableRwLock = Box<RwLock>;
 
 unsafe impl Send for RwLock {}
 unsafe impl Sync for RwLock {}
-
-impl LazyInit for RwLock {
-    fn init() -> Box<Self> {
-        Box::new(Self::new())
-    }
-
-    fn destroy(mut rwlock: Box<Self>) {
-        // We're not allowed to pthread_rwlock_destroy a locked rwlock,
-        // so check first if it's unlocked.
-        if *rwlock.write_locked.get_mut() || *rwlock.num_readers.get_mut() != 0 {
-            // The rwlock is locked. This happens if a RwLock{Read,Write}Guard is leaked.
-            // In this case, we just leak the RwLock too.
-            forget(rwlock);
-        }
-    }
-
-    fn cancel_init(_: Box<Self>) {
-        // In this case, we can just drop it without any checks,
-        // since it cannot have been locked yet.
-    }
-}
 
 impl RwLock {
     pub const fn new() -> RwLock {
