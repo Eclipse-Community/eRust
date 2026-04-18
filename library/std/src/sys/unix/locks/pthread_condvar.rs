@@ -1,13 +1,12 @@
 use crate::cell::UnsafeCell;
 use crate::sys::locks::{pthread_mutex, Mutex};
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 use crate::time::Duration;
 
 pub struct Condvar {
     inner: UnsafeCell<libc::pthread_cond_t>,
 }
 
-pub(crate) type MovableCondvar = LazyBox<Condvar>;
+pub type MovableCondvar = Box<Condvar>;
 
 unsafe impl Send for Condvar {}
 unsafe impl Sync for Condvar {}
@@ -17,14 +16,6 @@ const TIMESPEC_MAX: libc::timespec =
 
 fn saturating_cast_to_time_t(value: u64) -> libc::time_t {
     if value > <libc::time_t>::MAX as u64 { <libc::time_t>::MAX } else { value as libc::time_t }
-}
-
-impl LazyInit for Condvar {
-    fn init() -> Box<Self> {
-        let mut condvar = Box::new(Self::new());
-        unsafe { condvar.init() };
-        condvar
-    }
 }
 
 impl Condvar {
@@ -42,7 +33,7 @@ impl Condvar {
         target_os = "android",
         target_os = "redox"
     ))]
-    unsafe fn init(&mut self) {}
+    pub unsafe fn init(&mut self) {}
 
     // NOTE: ESP-IDF's PTHREAD_COND_INITIALIZER support is not released yet
     // So on that platform, init() should always be called
@@ -52,6 +43,7 @@ impl Condvar {
     // Similar story for the 3DS (horizon).
     #[cfg(any(target_os = "espidf", target_os = "horizon"))]
     unsafe fn init(&mut self) {
+    pub unsafe fn init(&mut self) {
         let r = libc::pthread_cond_init(self.inner.get(), crate::ptr::null());
         assert_eq!(r, 0);
     }
@@ -66,7 +58,7 @@ impl Condvar {
         target_os = "espidf",
         target_os = "horizon"
     )))]
-    unsafe fn init(&mut self) {
+    pub unsafe fn init(&mut self) {
         use crate::mem::MaybeUninit;
         let mut attr = MaybeUninit::<libc::pthread_condattr_t>::uninit();
         let r = libc::pthread_condattr_init(attr.as_mut_ptr());
