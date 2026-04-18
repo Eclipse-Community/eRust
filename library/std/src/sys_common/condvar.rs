@@ -14,8 +14,7 @@ pub struct Condvar {
 
 impl Condvar {
     /// Creates a new condition variable for use.
-    #[inline]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         let mut c = imp::MovableCondvar::from(imp::Condvar::new());
         unsafe { c.init() };
         Self { inner: c, check: CondvarCheck::new() }
