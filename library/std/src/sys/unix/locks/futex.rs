@@ -119,6 +119,9 @@ impl Condvar {
     }
 
     #[inline]
+    pub unsafe fn init(&mut self) {}
+
+    #[inline]
     pub unsafe fn destroy(&self) {}
 
     // All the memory orderings here are `Relaxed`,

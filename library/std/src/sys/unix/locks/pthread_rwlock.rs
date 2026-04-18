@@ -1,6 +1,5 @@
 use crate::cell::UnsafeCell;
 use crate::sync::atomic::{AtomicUsize, Ordering};
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 
 pub struct RwLock {
     inner: UnsafeCell<libc::pthread_rwlock_t>,
@@ -8,16 +7,10 @@ pub struct RwLock {
     num_readers: AtomicUsize,
 }
 
-pub(crate) type MovableRwLock = LazyBox<RwLock>;
+pub type MovableRwLock = Box<RwLock>;
 
 unsafe impl Send for RwLock {}
 unsafe impl Sync for RwLock {}
-
-impl LazyInit for RwLock {
-    fn init() -> Box<Self> {
-        Box::new(Self::new())
-    }
-}
 
 impl RwLock {
     pub const fn new() -> RwLock {
