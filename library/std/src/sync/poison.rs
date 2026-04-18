@@ -19,7 +19,6 @@ pub struct Flag {
 // all cases.
 
 impl Flag {
-    #[inline]
     pub const fn new() -> Flag {
         Flag { failed: AtomicBool::new(false) }
     }
