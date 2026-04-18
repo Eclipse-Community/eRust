@@ -65,13 +65,9 @@ impl Condvar {
         mutex.lock();
         res == 0
     }
-}
 
-impl Drop for Condvar {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = abi::sem_destroy(self.sem1);
-            let _ = abi::sem_destroy(self.sem2);
-        }
+    pub unsafe fn destroy(&self) {
+        let _ = abi::sem_destroy(self.sem1);
+        let _ = abi::sem_destroy(self.sem2);
     }
 }

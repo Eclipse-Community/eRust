@@ -25,6 +25,9 @@ impl Mutex {
     pub unsafe fn init(&mut self) {}
 
     #[inline]
+    pub unsafe fn destroy(&self) {}
+
+    #[inline]
     pub unsafe fn try_lock(&self) -> bool {
         self.futex.compare_exchange(0, 1, Acquire, Relaxed).is_ok()
     }
@@ -114,6 +117,9 @@ impl Condvar {
     pub const fn new() -> Self {
         Self { futex: AtomicU32::new(0) }
     }
+
+    #[inline]
+    pub unsafe fn destroy(&self) {}
 
     // All the memory orderings here are `Relaxed`,
     // because synchronization is done by unlocking and locking the mutex.
