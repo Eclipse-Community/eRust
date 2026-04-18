@@ -2,7 +2,6 @@
 mod tests;
 
 use crate::num::NonZeroUsize;
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 
 use super::waitqueue::{
     try_lock_or_false, NotifiedTcs, SpinMutex, SpinMutexGuard, WaitQueue, WaitVariable,
@@ -14,13 +13,7 @@ pub struct RwLock {
     writer: SpinMutex<WaitVariable<bool>>,
 }
 
-pub(crate) type MovableRwLock = LazyBox<RwLock>;
-
-impl LazyInit for RwLock {
-    fn init() -> Box<Self> {
-        Box::new(Self::new())
-    }
-}
+pub type MovableRwLock = Box<RwLock>;
 
 // Check at compile time that RwLock size matches C definition (see test_c_rwlock_initializer below)
 //

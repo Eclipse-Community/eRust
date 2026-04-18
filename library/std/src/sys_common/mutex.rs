@@ -62,7 +62,9 @@ impl MovableMutex {
     /// Creates a new mutex.
     #[inline]
     pub const fn new() -> Self {
-        Self(imp::MovableMutex::new())
+        let mut mutex = imp::MovableMutex::from(imp::Mutex::new());
+        unsafe { mutex.init() };
+        Self(mutex)
     }
 
     pub(super) fn raw(&self) -> &imp::Mutex {

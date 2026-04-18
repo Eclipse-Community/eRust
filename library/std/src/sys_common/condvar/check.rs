@@ -1,7 +1,6 @@
 use crate::ptr;
 use crate::sync::atomic::{AtomicPtr, Ordering};
 use crate::sys::locks as imp;
-use crate::sys_common::lazy_box::{LazyBox, LazyInit};
 use crate::sys_common::mutex::MovableMutex;
 
 pub trait CondvarCheck {
@@ -10,7 +9,7 @@ pub trait CondvarCheck {
 
 /// For boxed mutexes, a `Condvar` will check it's only ever used with the same
 /// mutex, based on its (stable) address.
-impl<T: LazyInit> CondvarCheck for LazyBox<T> {
+impl CondvarCheck for Box<imp::Mutex> {
     type Check = SameMutexCheck;
 }
 
