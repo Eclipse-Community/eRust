@@ -49,4 +49,8 @@ impl Condvar {
     pub unsafe fn notify_all(&self) {
         c::WakeAllConditionVariable(self.inner.get())
     }
+
+    pub unsafe fn destroy(&self) {
+        // ...
+    }
 }
