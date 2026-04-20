@@ -8,8 +8,6 @@ use crate::time::Duration;
 
 use libc::c_void;
 
-use super::to_u16s;
-
 pub const DEFAULT_MIN_STACK_SIZE: usize = 2 * 1024 * 1024;
 
 pub struct Thread {
@@ -59,14 +57,7 @@ impl Thread {
         }
     }
 
-    pub fn set_name(name: &CStr) {
-        if let Ok(utf8) = name.to_str() {
-            if let Ok(utf16) = to_u16s(utf8) {
-                unsafe {
-                    c::SetThreadDescription(c::GetCurrentThread(), utf16.as_ptr());
-                };
-            };
-        };
+    pub fn set_name(_name: &CStr) {
     }
 
     pub fn join(self) {

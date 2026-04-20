@@ -311,18 +311,23 @@ impl File {
     pub fn truncate(&self, size: u64) -> io::Result<()> {
         let mut info = c::FILE_END_OF_FILE_INFO { EndOfFile: size as c::LARGE_INTEGER };
         let size = mem::size_of_val(&info);
-        cvt(unsafe {
-            c::SetFileInformationByHandle(
+        unsafe {
+            let mut io: c::IO_STATUS_BLOCK = mem::zeroed();
+            if c::NtSetInformationFile(
                 self.handle.raw(),
-                c::FileEndOfFileInfo,
+                &mut io as *mut _ as *mut _,
                 &mut info as *mut _ as *mut _,
                 size as c::DWORD,
-            )
-        })?;
-        Ok(())
+                20,
+            ) == 0
+            {
+                Ok(())
+            } else {
+                Err(crate::io::Error::last_os_error())
+            }
+        }
     }
 
-    #[cfg(not(target_vendor = "uwp"))]
     pub fn file_attr(&self) -> io::Result<FileAttr> {
         unsafe {
             let mut info: c::BY_HANDLE_FILE_INFORMATION = mem::zeroed();
@@ -539,15 +544,21 @@ impl File {
             FileAttributes: perm.attrs,
         };
         let size = mem::size_of_val(&info);
-        cvt(unsafe {
-            c::SetFileInformationByHandle(
+        unsafe {
+            let mut io: c::IO_STATUS_BLOCK = mem::zeroed();
+            if c::NtSetInformationFile(
                 self.handle.raw(),
-                c::FileBasicInfo,
+                &mut io as *mut _ as *mut _,
                 &mut info as *mut _ as *mut _,
                 size as c::DWORD,
-            )
-        })?;
-        Ok(())
+                4,
+            ) == 0
+            {
+                Ok(())
+            } else {
+                Err(crate::io::Error::last_os_error())
+            }
+        }
     }
 }
 
@@ -842,13 +853,12 @@ fn get_path(f: &File) -> io::Result<PathBuf> {
 }
 
 pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
-    let mut opts = OpenOptions::new();
-    // No read or write permissions are necessary
-    opts.access_mode(0);
-    // This flag is so we can open directories too
-    opts.custom_flags(c::FILE_FLAG_BACKUP_SEMANTICS);
-    let f = File::open(p, &opts)?;
-    get_path(&f)
+    let path = to_u16s(p)?;
+    let mut file_part = ptr::null_mut();
+    super::fill_utf16_buf(
+        |buf, sz| unsafe { c::GetFullPathNameW(path.as_ptr(), sz, buf, &mut file_part) },
+        |buf| PathBuf::from(OsString::from_wide(buf)),
+    )
 }
 
 pub fn copy(from: &Path, to: &Path) -> io::Result<u64> {
