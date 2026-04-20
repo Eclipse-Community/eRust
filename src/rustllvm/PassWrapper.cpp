@@ -23,6 +23,8 @@
 
 #include "llvm-c/Transforms/PassManagerBuilder.h"
 
+#include "llvm/InitializePasses.h"
+
 using namespace llvm;
 using namespace llvm::legacy;
 

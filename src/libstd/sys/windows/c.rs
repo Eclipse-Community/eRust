@@ -7,7 +7,7 @@
 use crate::os::raw::{c_int, c_uint, c_ulong, c_long, c_longlong, c_ushort, c_char};
 #[cfg(target_arch = "x86_64")]
 use crate::os::raw::c_ulonglong;
-use crate::ptr;
+//use crate::ptr;
 
 use libc::{wchar_t, size_t, c_void};
 
@@ -45,6 +45,7 @@ pub type LPCSTR = *const CHAR;
 pub type LPCVOID = *const c_void;
 pub type LPCWSTR = *const WCHAR;
 pub type LPDWORD = *mut DWORD;
+pub type LPLONG = *mut LONG;
 pub type LPHANDLE = *mut HANDLE;
 pub type LPOVERLAPPED = *mut OVERLAPPED;
 pub type LPPROCESS_INFORMATION = *mut PROCESS_INFORMATION;
@@ -62,7 +63,7 @@ pub type LPWSABUF = *mut WSABUF;
 pub type LPWSAOVERLAPPED = *mut c_void;
 pub type LPWSAOVERLAPPED_COMPLETION_ROUTINE = *mut c_void;
 
-pub type PCONDITION_VARIABLE = *mut CONDITION_VARIABLE;
+//pub type PCONDITION_VARIABLE = *mut CONDITION_VARIABLE;
 pub type PLARGE_INTEGER = *mut c_longlong;
 pub type PSRWLOCK = *mut SRWLOCK;
 
@@ -209,10 +210,10 @@ pub const INFINITE: DWORD = !0;
 
 pub const DUPLICATE_SAME_ACCESS: DWORD = 0x00000002;
 
-pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE {
+/*pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE {
     ptr: ptr::null_mut(),
 };
-pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { ptr: ptr::null_mut() };
+pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { ptr: ptr::null_mut() };*/
 
 pub const DETACHED_PROCESS: DWORD = 0x00000008;
 pub const CREATE_NEW_PROCESS_GROUP: DWORD = 0x00000200;
@@ -259,7 +260,7 @@ pub struct ipv6_mreq {
     pub ipv6mr_interface: c_uint,
 }
 
-pub const VOLUME_NAME_DOS: DWORD = 0x0;
+//pub const VOLUME_NAME_DOS: DWORD = 0x0;
 pub const MOVEFILE_REPLACE_EXISTING: DWORD = 1;
 
 pub const FILE_BEGIN: DWORD = 0;
@@ -463,8 +464,8 @@ pub type LPPROGRESS_ROUTINE = crate::option::Option<unsafe extern "system" fn(
     lpData: LPVOID,
 ) -> DWORD>;
 
-#[repr(C)]
-pub struct CONDITION_VARIABLE { pub ptr: LPVOID }
+/*#[repr(C)]
+pub struct CONDITION_VARIABLE { pub ptr: LPVOID }*/
 #[repr(C)]
 pub struct SRWLOCK { pub ptr: LPVOID }
 #[repr(C)]
@@ -989,6 +990,21 @@ pub struct timeval {
     pub tv_usec: c_long,
 }
 
+pub type NTSTATUS = LONG;
+
+#[repr(C)]
+union IO_STATUS_BLOCK_u {
+    Status: NTSTATUS,
+    Pointer: LPVOID,
+}
+
+#[repr(C)]
+pub struct IO_STATUS_BLOCK {
+    u: IO_STATUS_BLOCK_u,
+    Information: ULONG_PTR,
+}
+pub type PIO_STATUS_BLOCK = *mut IO_STATUS_BLOCK;
+
 extern "system" {
     pub fn WSAStartup(wVersionRequested: WORD,
                       lpWSAData: LPWSADATA) -> c_int;
@@ -1297,6 +1313,17 @@ extern "system" {
     pub fn HeapAlloc(hHeap: HANDLE, dwFlags: DWORD, dwBytes: SIZE_T) -> LPVOID;
     pub fn HeapReAlloc(hHeap: HANDLE, dwFlags: DWORD, lpMem: LPVOID, dwBytes: SIZE_T) -> LPVOID;
     pub fn HeapFree(hHeap: HANDLE, dwFlags: DWORD, lpMem: LPVOID) -> BOOL;
+    pub fn CreateSemaphoreW(lpSemaphoreAttributes: LPSECURITY_ATTRIBUTES, lInitialCount: LONG, lMaximumCount: LONG, lpName: LPCWSTR) -> HANDLE;
+    pub fn ReleaseSemaphore(hSemaphore: HANDLE, lReleaseCount: LONG, lpPreviousCount: LPLONG) -> BOOL;
+    pub fn InterlockedExchangeAdd(Addend: *mut LONG, Value: LONG) -> LONG;
+    pub fn SetEvent(hEvent: HANDLE) -> BOOL;
+    pub fn ResetEvent(hEvent: HANDLE) -> BOOL;
+    pub fn InterlockedIncrement(Addend: *mut LONG) -> LONG;
+    pub fn NtSetInformationFile(hFile: HANDLE, IoStatusBlock: PIO_STATUS_BLOCK, FileInformation: LPVOID, Length: ULONG, FileInformationClass: UINT) -> NTSTATUS;
+    //pub fn SetFilePointer(hFile: HANDLE, lDistanceToMove: LONG, lpDistanceToMoveHigh:  *mut LONG, dwMoveMethod: DWORD) -> DWORD;
+    pub fn NtQueryObject(Handle: HANDLE, ObjectInformationClass: UINT, ObjectInformation: LPCWSTR, ObjectInformationLength: ULONG, ReturnLength: *mut ULONG) -> NTSTATUS;
+    pub fn QueryDosDeviceW(lpDeviceName: LPCWSTR, lpTargetPath: LPWSTR, ucchMax: DWORD) -> DWORD;
+    pub fn GetLogicalDriveStringsW(nBufferLength: DWORD, lpBuffer: LPWSTR) -> DWORD;
 }
 
 // Functions that aren't available on every version of Windows that we support,
@@ -1307,14 +1334,15 @@ compat_fn! {
     pub fn CreateSymbolicLinkW(_lpSymlinkFileName: LPCWSTR,
                                _lpTargetFileName: LPCWSTR,
                                _dwFlags: DWORD) -> BOOLEAN {
-        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
+        //SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
+        panic!("CreateSymbolicLinkW")
     }
-    pub fn GetFinalPathNameByHandleW(_hFile: HANDLE,
+    /*pub fn GetFinalPathNameByHandleW(_hFile: HANDLE,
                                      _lpszFilePath: LPCWSTR,
                                      _cchFilePath: DWORD,
                                      _dwFlags: DWORD) -> DWORD {
-        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
-    }
+         SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
+    }*/
     pub fn SetThreadStackGuarantee(_size: *mut c_ulong) -> BOOL {
         SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
     }
@@ -1322,7 +1350,7 @@ compat_fn! {
                                 lpThreadDescription: LPCWSTR) -> HRESULT {
         SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); E_NOTIMPL
     }
-    pub fn SetFileInformationByHandle(_hFile: HANDLE,
+    /*pub fn SetFileInformationByHandle(_hFile: HANDLE,
                     _FileInformationClass: FILE_INFO_BY_HANDLE_CLASS,
                     _lpFileInformation: LPVOID,
                     _dwBufferSize: DWORD) -> BOOL {
@@ -1341,25 +1369,25 @@ compat_fn! {
     pub fn WakeAllConditionVariable(ConditionVariable: PCONDITION_VARIABLE)
                                     -> () {
         panic!("condition variables not available")
-    }
+    }*/
     pub fn AcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> () {
         panic!("rwlocks not available")
     }
-    pub fn AcquireSRWLockShared(SRWLock: PSRWLOCK) -> () {
+    /*pub fn AcquireSRWLockShared(SRWLock: PSRWLOCK) -> () {
         panic!("rwlocks not available")
-    }
+    }*/
     pub fn ReleaseSRWLockExclusive(SRWLock: PSRWLOCK) -> () {
         panic!("rwlocks not available")
     }
-    pub fn ReleaseSRWLockShared(SRWLock: PSRWLOCK) -> () {
+    /*pub fn ReleaseSRWLockShared(SRWLock: PSRWLOCK) -> () {
         panic!("rwlocks not available")
-    }
+    }*/
     pub fn TryAcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> BOOLEAN {
         panic!("rwlocks not available")
     }
-    pub fn TryAcquireSRWLockShared(SRWLock: PSRWLOCK) -> BOOLEAN {
+    /*pub fn TryAcquireSRWLockShared(SRWLock: PSRWLOCK) -> BOOLEAN {
         panic!("rwlocks not available")
-    }
+    }*/
 }
 
 #[cfg(all(target_env = "gnu", feature = "backtrace"))]
