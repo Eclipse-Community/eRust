@@ -63,7 +63,7 @@ use crate::sync::atomic::{
     AtomicI8, AtomicUsize,
     Ordering::{Acquire, Relaxed, Release},
 };
-use crate::sys::{c, dur2timeout};
+use crate::sys::c;
 use crate::time::Duration;
 
 pub struct Parker {
@@ -108,27 +108,13 @@ impl Parker {
             return;
         }
 
-        if let Some(wait_on_address) = c::WaitOnAddress::option() {
-            loop {
-                // Wait for something to happen, assuming it's still set to PARKED.
-                wait_on_address(self.ptr(), &PARKED as *const _ as c::LPVOID, 1, c::INFINITE);
-                // Change NOTIFIED=>EMPTY but leave PARKED alone.
-                if self.state.compare_exchange(NOTIFIED, EMPTY, Acquire, Acquire).is_ok() {
-                    // Actually woken up by unpark().
-                    return;
-                } else {
-                    // Spurious wake up. We loop to try again.
-                }
-            }
-        } else {
-            // Wait for unpark() to produce this event.
-            c::NtWaitForKeyedEvent(keyed_event_handle(), self.ptr(), 0, ptr::null_mut());
-            // Set the state back to EMPTY (from either PARKED or NOTIFIED).
-            // Note that we don't just write EMPTY, but use swap() to also
-            // include an acquire-ordered read to synchronize with unpark()'s
-            // release-ordered write.
-            self.state.swap(EMPTY, Acquire);
-        }
+          // Wait for unpark() to produce this event.
+          c::NtWaitForKeyedEvent(keyed_event_handle(), self.ptr(), 0, ptr::null_mut());
+          // Set the state back to EMPTY (from either PARKED or NOTIFIED).
+          // Note that we don't just write EMPTY, but use swap() to also
+          // include an acquire-ordered read to synchronize with unpark()'s
+          // release-ordered write.
+          self.state.swap(EMPTY, Acquire);
     }
 
     // Assumes this is only called by the thread that owns the Parker,
@@ -140,47 +126,31 @@ impl Parker {
             return;
         }
 
-        if let Some(wait_on_address) = c::WaitOnAddress::option() {
-            // Wait for something to happen, assuming it's still set to PARKED.
-            wait_on_address(self.ptr(), &PARKED as *const _ as c::LPVOID, 1, dur2timeout(timeout));
-            // Set the state back to EMPTY (from either PARKED or NOTIFIED).
-            // Note that we don't just write EMPTY, but use swap() to also
-            // include an acquire-ordered read to synchronize with unpark()'s
-            // release-ordered write.
-            if self.state.swap(EMPTY, Acquire) == NOTIFIED {
-                // Actually woken up by unpark().
-            } else {
-                // Timeout or spurious wake up.
-                // We return either way, because we can't easily tell if it was the
-                // timeout or not.
-            }
-        } else {
-            // Need to wait for unpark() using NtWaitForKeyedEvent.
-            let handle = keyed_event_handle();
+        // Need to wait for unpark() using NtWaitForKeyedEvent.
+        let handle = keyed_event_handle();
 
-            // NtWaitForKeyedEvent uses a unit of 100ns, and uses negative
-            // values to indicate a relative time on the monotonic clock.
-            // This is documented here for the underlying KeWaitForSingleObject function:
-            // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-kewaitforsingleobject
-            let mut timeout = match i64::try_from((timeout.as_nanos() + 99) / 100) {
-                Ok(t) => -t,
-                Err(_) => i64::MIN,
-            };
+        // NtWaitForKeyedEvent uses a unit of 100ns, and uses negative
+        // values to indicate a relative time on the monotonic clock.
+        // This is documented here for the underlying KeWaitForSingleObject function:
+        // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-kewaitforsingleobject
+        let mut timeout = match i64::try_from((timeout.as_nanos() + 99) / 100) {
+            Ok(t) => -t,
+            Err(_) => i64::MIN,
+        };
 
-            // Wait for unpark() to produce this event.
-            let unparked =
-                c::NtWaitForKeyedEvent(handle, self.ptr(), 0, &mut timeout) == c::STATUS_SUCCESS;
+        // Wait for unpark() to produce this event.
+        let unparked =
+            c::NtWaitForKeyedEvent(handle, self.ptr(), 0, &mut timeout) == c::STATUS_SUCCESS;
 
-            // Set the state back to EMPTY (from either PARKED or NOTIFIED).
-            let prev_state = self.state.swap(EMPTY, Acquire);
+        // Set the state back to EMPTY (from either PARKED or NOTIFIED).
+        let prev_state = self.state.swap(EMPTY, Acquire);
 
-            if !unparked && prev_state == NOTIFIED {
-                // We were awoken by a timeout, not by unpark(), but the state
-                // was set to NOTIFIED, which means we *just* missed an
-                // unpark(), which is now blocked on us to wait for it.
-                // Wait for it to consume the event and unblock that thread.
-                c::NtWaitForKeyedEvent(handle, self.ptr(), 0, ptr::null_mut());
-            }
+        if !unparked && prev_state == NOTIFIED {
+            // We were awoken by a timeout, not by unpark(), but the state
+            // was set to NOTIFIED, which means we *just* missed an
+            // unpark(), which is now blocked on us to wait for it.
+            // Wait for it to consume the event and unblock that thread.
+            c::NtWaitForKeyedEvent(handle, self.ptr(), 0, ptr::null_mut());
         }
     }
 
@@ -192,21 +162,15 @@ impl Parker {
         // purpose, to make sure every unpark() has a release-acquire ordering
         // with park().
         if self.state.swap(NOTIFIED, Release) == PARKED {
-            if let Some(wake_by_address_single) = c::WakeByAddressSingle::option() {
-                unsafe {
-                    wake_by_address_single(self.ptr());
-                }
-            } else {
-                // If we run NtReleaseKeyedEvent before the waiting thread runs
-                // NtWaitForKeyedEvent, this (shortly) blocks until we can wake it up.
-                // If the waiting thread wakes up before we run NtReleaseKeyedEvent
-                // (e.g. due to a timeout), this blocks until we do wake up a thread.
-                // To prevent this thread from blocking indefinitely in that case,
-                // park_impl() will, after seeing the state set to NOTIFIED after
-                // waking up, call NtWaitForKeyedEvent again to unblock us.
-                unsafe {
-                    c::NtReleaseKeyedEvent(keyed_event_handle(), self.ptr(), 0, ptr::null_mut());
-                }
+            // If we run NtReleaseKeyedEvent before the waiting thread runs
+            // NtWaitForKeyedEvent, this (shortly) blocks until we can wake it up.
+            // If the waiting thread wakes up before we run NtReleaseKeyedEvent
+            // (e.g. due to a timeout), this blocks until we do wake up a thread.
+            // To prevent this thread from blocking indefinitely in that case,
+            // park_impl() will, after seeing the state set to NOTIFIED after
+            // waking up, call NtWaitForKeyedEvent again to unblock us.
+            unsafe {
+                c::NtReleaseKeyedEvent(keyed_event_handle(), self.ptr(), 0, ptr::null_mut());
             }
         }
     }

@@ -765,10 +765,7 @@ extern "system" {
         dwFlags: DWORD,
     ) -> SOCKET;
     pub fn ioctlsocket(s: SOCKET, cmd: c_long, argp: *mut c_ulong) -> c_int;
-    pub fn InitializeCriticalSectionAndSpinCount(
-        CriticalSection: *mut CRITICAL_SECTION,
-        dwSpinCount: DWORD,
-    ) -> BOOL;
+    pub fn InitializeCriticalSectionAndSpinCount(CriticalSection: *mut CRITICAL_SECTION, dwSpinCount: DWORD) -> BOOL;
     pub fn EnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
     pub fn TryEnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION) -> BOOL;
     pub fn LeaveCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
@@ -1003,6 +1000,12 @@ extern "system" {
         exceptfds: *mut fd_set,
         timeout: *const timeval,
     ) -> c_int;
+    pub fn GetFullPathNameW(
+        lpFileName: LPCWSTR,
+        nBufferLength: DWORD,
+        lpBuffer: LPWSTR,
+        lpFilePart: *mut LPWSTR,
+    ) -> DWORD;
 
     pub fn GetProcessHeap() -> HANDLE;
     pub fn HeapAlloc(hHeap: HANDLE, dwFlags: DWORD, dwBytes: SIZE_T) -> LPVOID;
@@ -1016,12 +1019,6 @@ extern "system" {
         lpTargetFileName: LPCWSTR,
         dwFlags: DWORD,
     ) -> BOOLEAN;
-
-    pub fn InitializeCriticalSectionAndSpinCount(CriticalSection: *mut CRITICAL_SECTION, dwSpinCount: DWORD) -> BOOL;
-    pub fn EnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
-    pub fn TryEnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION) -> BOOL;
-    pub fn LeaveCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
-    pub fn DeleteCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
 }
 
 #[link(name = "ntdll")]
