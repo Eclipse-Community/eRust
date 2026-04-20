@@ -1,0 +1,22 @@
+[package]
+name = "rls-ipc"
+version = "0.1.0"
+authors = ["Igor Matuszewski <Xanewok@gmail.com>"]
+edition = "2018"
+description = "Inter-process communication (IPC) layer between RLS and rustc"
+license = "Apache-2.0/MIT"
+repository = "https://github.com/rust-lang/rls"
+categories = ["development-tools"]
+
+[dependencies]
+jsonrpc-core = "14"
+jsonrpc-core-client = "14"
+jsonrpc-derive = "14"
+# Pin 14.0.3 to use single parity-tokio-ipc version (0.2)
+jsonrpc-ipc-server = { version = "=14.0.3", optional = true }
+rls-data = "0.19"
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+client = ["jsonrpc-core-client/ipc"]
+server = ["jsonrpc-ipc-server"]
