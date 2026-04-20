@@ -1,0 +1,37 @@
+[package]
+name = "clippy_lints"
+# begin automatic update
+version = "0.0.212"
+# end automatic update
+authors = [
+	"Manish Goregaokar <manishsmail@gmail.com>",
+	"Andre Bogus <bogusandre@gmail.com>",
+	"Georg Brandl <georg@python.org>",
+	"Martin Carton <cartonmartin@gmail.com>"
+]
+description = "A bunch of helpful lints to avoid common pitfalls in Rust"
+repository = "https://github.com/rust-lang/rust-clippy"
+readme = "README.md"
+license = "MPL-2.0"
+keywords = ["clippy", "lint", "plugin"]
+edition = "2018"
+
+[dependencies]
+cargo_metadata = "0.7.1"
+itertools = "0.8"
+lazy_static = "1.0.2"
+matches = "0.1.7"
+quine-mc_cluskey = "0.2.2"
+regex-syntax = "0.6"
+semver = "0.9.0"
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4"
+unicode-normalization = "0.1"
+pulldown-cmark = "0.2"
+url = "1.7.0"
+if_chain = "0.1.3"
+smallvec = { version = "0.6.5", features = ["union"] }
+
+[features]
+debugging = []

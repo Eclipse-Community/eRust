@@ -1,0 +1,14 @@
+if_chain! {
+    if let StmtKind::Local(ref local) = stmt.node;
+    if let Some(ref init) = local.init;
+    if let ExprKind::Cast(ref expr, ref cast_ty) = init.node;
+    if let TyKind::Path(ref qp) = cast_ty.node;
+    if match_qpath(qp, &["char"]);
+    if let ExprKind::Lit(ref lit) = expr.node;
+    if let LitKind::Int(69, _) = lit.node;
+    if let PatKind::Binding(BindingAnnotation::Unannotated, _, name, None) = local.pat.node;
+    if name.node.as_str() == "x";
+    then {
+        // report your lint here
+    }
+}

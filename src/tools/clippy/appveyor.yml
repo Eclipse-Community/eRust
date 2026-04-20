@@ -1,0 +1,35 @@
+environment:
+    global:
+        PROJECT_NAME: rust-clippy
+    matrix:
+        #- TARGET: i686-pc-windows-gnu
+        #- TARGET: i686-pc-windows-msvc
+        #- TARGET: x86_64-pc-windows-gnu
+        - TARGET: x86_64-pc-windows-msvc
+
+branches:
+    # Don't build these branches
+    except:
+        # Used by bors
+        - trying.tmp
+        - staging.tmp
+
+install:
+    - curl -sSf -o rustup-init.exe https://win.rustup.rs/
+    - rustup-init.exe -y --default-host %TARGET% --default-toolchain beta
+    - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+    - set PATH=%PATH%;C:\Users\appveyor\.rustup\toolchains\master\bin
+    - rustc -V
+    - cargo -V
+
+build: false
+
+test_script:
+    - set RUST_BACKTRACE=1
+    - set RUSTC_BOOTSTRAP=1
+    - cargo build --features debugging
+    - cargo test --features debugging
+
+notifications:
+    - provider: Email
+      on_build_success: false

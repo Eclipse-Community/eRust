@@ -1,0 +1,10 @@
+error: the `y @ _` pattern can be written as just `y`
+  --> $DIR/patterns.rs:8:9
+   |
+LL |         y @ _ => (),
+   |         ^^^^^
+   |
+   = note: `-D clippy::redundant-pattern` implied by `-D warnings`
+
+error: aborting due to previous error
+

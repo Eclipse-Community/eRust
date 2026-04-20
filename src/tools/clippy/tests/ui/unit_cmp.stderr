@@ -1,0 +1,26 @@
+error: ==-comparison of unit values detected. This will always be true
+  --> $DIR/unit_cmp.rs:12:8
+   |
+LL |       if {
+   |  ________^
+LL | |         true;
+LL | |     } == {
+LL | |         false;
+LL | |     } {}
+   | |_____^
+   |
+   = note: `-D clippy::unit-cmp` implied by `-D warnings`
+
+error: >-comparison of unit values detected. This will always be false
+  --> $DIR/unit_cmp.rs:18:8
+   |
+LL |       if {
+   |  ________^
+LL | |         true;
+LL | |     } > {
+LL | |         false;
+LL | |     } {}
+   | |_____^
+
+error: aborting due to 2 previous errors
+
