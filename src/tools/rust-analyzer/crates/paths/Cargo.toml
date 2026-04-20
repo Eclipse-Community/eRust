@@ -1,0 +1,12 @@
+[package]
+name = "paths"
+version = "0.0.0"
+description = "TBD"
+license = "MIT OR Apache-2.0"
+edition = "2018"
+
+[lib]
+doctest = false
+
+[dependencies]
+serde = "1"
