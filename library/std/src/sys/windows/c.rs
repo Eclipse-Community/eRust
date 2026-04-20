@@ -6,7 +6,6 @@
 
 use crate::os::raw::NonZero_c_ulong;
 use crate::os::raw::{c_char, c_int, c_long, c_longlong, c_uint, c_ulong, c_ushort};
-use crate::ptr;
 
 use libc::{c_void, size_t, wchar_t};
 
@@ -23,7 +22,6 @@ pub type NonZeroDWORD = NonZero_c_ulong;
 pub type HANDLE = LPVOID;
 pub type HINSTANCE = HANDLE;
 pub type HMODULE = HINSTANCE;
-pub type HRESULT = LONG;
 pub type BOOL = c_int;
 pub type BYTE = u8;
 pub type BOOLEAN = BYTE;
@@ -46,6 +44,7 @@ pub type LPBYTE = *mut BYTE;
 pub type LPCSTR = *const CHAR;
 pub type LPCWSTR = *const WCHAR;
 pub type LPDWORD = *mut DWORD;
+pub type LPLONG = *mut LONG;
 pub type LPHANDLE = *mut HANDLE;
 pub type LPOVERLAPPED = *mut OVERLAPPED;
 pub type LPPROCESS_INFORMATION = *mut PROCESS_INFORMATION;
@@ -63,9 +62,7 @@ pub type LPWSABUF = *mut WSABUF;
 pub type LPWSAOVERLAPPED = *mut c_void;
 pub type LPWSAOVERLAPPED_COMPLETION_ROUTINE = *mut c_void;
 
-pub type PCONDITION_VARIABLE = *mut CONDITION_VARIABLE;
 pub type PLARGE_INTEGER = *mut c_longlong;
-pub type PSRWLOCK = *mut SRWLOCK;
 
 pub type SOCKET = crate::os::windows::raw::SOCKET;
 pub type socklen_t = c_int;
@@ -161,8 +158,6 @@ pub const STD_ERROR_HANDLE: DWORD = -12i32 as DWORD;
 
 pub const PROGRESS_CONTINUE: DWORD = 0;
 
-pub const E_NOTIMPL: HRESULT = 0x80004001u32 as HRESULT;
-
 pub const INVALID_HANDLE_VALUE: HANDLE = !0 as HANDLE;
 
 pub const FACILITY_NT_BIT: DWORD = 0x1000_0000;
@@ -179,9 +174,6 @@ pub const DLL_PROCESS_DETACH: DWORD = 0;
 pub const INFINITE: DWORD = !0;
 
 pub const DUPLICATE_SAME_ACCESS: DWORD = 0x00000002;
-
-pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE { ptr: ptr::null_mut() };
-pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { ptr: ptr::null_mut() };
 
 pub const DETACHED_PROCESS: DWORD = 0x00000008;
 pub const CREATE_NEW_PROCESS_GROUP: DWORD = 0x00000200;
@@ -410,14 +402,6 @@ pub type LPPROGRESS_ROUTINE = crate::option::Option<
 >;
 
 #[repr(C)]
-pub struct CONDITION_VARIABLE {
-    pub ptr: LPVOID,
-}
-#[repr(C)]
-pub struct SRWLOCK {
-    pub ptr: LPVOID,
-}
-#[repr(C)]
 pub struct CRITICAL_SECTION {
     CriticalSectionDebug: LPVOID,
     LockCount: LONG,
@@ -554,6 +538,19 @@ pub struct ADDRINFOA {
     pub ai_addr: *mut SOCKADDR,
     pub ai_next: *mut ADDRINFOA,
 }
+
+#[repr(C)]
+union IO_STATUS_BLOCK_u {
+    Status: NTSTATUS,
+    Pointer: LPVOID,
+}
+
+#[repr(C)]
+pub struct IO_STATUS_BLOCK {
+    u: IO_STATUS_BLOCK_u,
+    Information: ULONG_PTR,
+}
+pub type PIO_STATUS_BLOCK = *mut IO_STATUS_BLOCK;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -740,47 +737,15 @@ if #[cfg(not(target_vendor = "uwp"))] {
 }
 }
 
-// UWP specific functions & types
-cfg_if::cfg_if! {
-if #[cfg(target_vendor = "uwp")] {
-    pub const BCRYPT_USE_SYSTEM_PREFERRED_RNG: DWORD = 0x00000002;
-
-    #[repr(C)]
-    pub struct FILE_STANDARD_INFO {
-        pub AllocationSize: LARGE_INTEGER,
-        pub EndOfFile: LARGE_INTEGER,
-        pub NumberOfLinks: DWORD,
-        pub DeletePending: BOOLEAN,
-        pub Directory: BOOLEAN,
-    }
-
-    #[link(name = "bcrypt")]
-    extern "system" {
-        pub fn BCryptGenRandom(
-            hAlgorithm: LPVOID,
-            pBuffer: *mut u8,
-            cbBuffer: ULONG,
-            dwFlags: ULONG,
-        ) -> LONG;
-    }
-    #[link(name = "kernel32")]
-    extern "system" {
-        pub fn GetFileInformationByHandleEx(
-            hFile: HANDLE,
-            fileInfoClass: FILE_INFO_BY_HANDLE_CLASS,
-            lpFileInformation: LPVOID,
-            dwBufferSize: DWORD,
-        ) -> BOOL;
-    }
-}
-}
-
 // Shared between Desktop & UWP
 
 #[link(name = "kernel32")]
 extern "system" {
     pub fn GetCurrentProcessId() -> DWORD;
-    pub fn InitializeCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+    pub fn InitializeCriticalSectionAndSpinCount(
+        CriticalSection: *mut CRITICAL_SECTION,
+        dwSpinCount: DWORD,
+    ) -> BOOL;
     pub fn EnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
     pub fn TryEnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION) -> BOOL;
     pub fn LeaveCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
@@ -792,7 +757,6 @@ extern "system" {
     pub fn GetCommandLineW() -> LPWSTR;
     pub fn GetTempPathW(nBufferLength: DWORD, lpBuffer: LPCWSTR) -> DWORD;
     pub fn GetCurrentProcess() -> HANDLE;
-    pub fn GetCurrentThread() -> HANDLE;
     pub fn GetStdHandle(which: DWORD) -> HANDLE;
     pub fn ExitProcess(uExitCode: c_uint) -> !;
     pub fn DeviceIoControl(
@@ -814,6 +778,19 @@ extern "system" {
         lpThreadId: LPDWORD,
     ) -> HANDLE;
     pub fn WaitForSingleObject(hHandle: HANDLE, dwMilliseconds: DWORD) -> DWORD;
+    pub fn SetEvent(hEvent: HANDLE) -> BOOL;
+    pub fn CreateSemaphoreW(
+        lpSemaphoreAttributes: LPSECURITY_ATTRIBUTES,
+        lInitialCount: LONG,
+        lMaximumCount: LONG,
+        lpName: LPCWSTR,
+    ) -> HANDLE;
+    pub fn ReleaseSemaphore(
+        hSemaphore: HANDLE,
+        lReleaseCount: LONG,
+        lpPreviousCount: LPLONG,
+    ) -> BOOL;
+    pub fn ResetEvent(hEvent: HANDLE) -> BOOL;
     pub fn SwitchToThread() -> BOOL;
     pub fn Sleep(dwMilliseconds: DWORD);
     pub fn GetProcessId(handle: HANDLE) -> DWORD;
@@ -891,7 +868,7 @@ extern "system" {
     ) -> BOOL;
     pub fn CloseHandle(hObject: HANDLE) -> BOOL;
     pub fn MoveFileExW(lpExistingFileName: LPCWSTR, lpNewFileName: LPCWSTR, dwFlags: DWORD)
-    -> BOOL;
+        -> BOOL;
     pub fn SetFilePointerEx(
         hFile: HANDLE,
         liDistanceToMove: LARGE_INTEGER,
@@ -954,34 +931,6 @@ extern "system" {
         lpTargetFileName: LPCWSTR,
         dwFlags: DWORD,
     ) -> BOOLEAN;
-    pub fn GetFinalPathNameByHandleW(
-        hFile: HANDLE,
-        lpszFilePath: LPCWSTR,
-        cchFilePath: DWORD,
-        dwFlags: DWORD,
-    ) -> DWORD;
-    pub fn SetFileInformationByHandle(
-        hFile: HANDLE,
-        FileInformationClass: FILE_INFO_BY_HANDLE_CLASS,
-        lpFileInformation: LPVOID,
-        dwBufferSize: DWORD,
-    ) -> BOOL;
-    pub fn SleepConditionVariableSRW(
-        ConditionVariable: PCONDITION_VARIABLE,
-        SRWLock: PSRWLOCK,
-        dwMilliseconds: DWORD,
-        Flags: ULONG,
-    ) -> BOOL;
-
-    pub fn WakeConditionVariable(ConditionVariable: PCONDITION_VARIABLE);
-    pub fn WakeAllConditionVariable(ConditionVariable: PCONDITION_VARIABLE);
-
-    pub fn AcquireSRWLockExclusive(SRWLock: PSRWLOCK);
-    pub fn AcquireSRWLockShared(SRWLock: PSRWLOCK);
-    pub fn ReleaseSRWLockExclusive(SRWLock: PSRWLOCK);
-    pub fn ReleaseSRWLockShared(SRWLock: PSRWLOCK);
-    pub fn TryAcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> BOOLEAN;
-    pub fn TryAcquireSRWLockShared(SRWLock: PSRWLOCK) -> BOOLEAN;
 
     pub fn CompareStringOrdinal(
         lpString1: LPCWSTR,
@@ -990,6 +939,22 @@ extern "system" {
         cchCount2: c_int,
         bIgnoreCase: BOOL,
     ) -> c_int;
+    pub fn InitializeCriticalSectionAndSpinCount(CriticalSection: *mut CRITICAL_SECTION, dwSpinCount: DWORD) -> BOOL;
+    pub fn EnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+    pub fn TryEnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION) -> BOOL;
+    pub fn LeaveCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+    pub fn DeleteCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+}
+
+#[link(name = "ntdll")]
+extern "system" {
+   pub fn NtSetInformationFile(
+       hFile: HANDLE,
+       IoStatusBlock: PIO_STATUS_BLOCK,
+       FileInformation: LPVOID,
+       Length: ULONG,
+       FileInformationClass: UINT,
+   ) -> NTSTATUS;
 }
 
 #[link(name = "ws2_32")]
@@ -1085,42 +1050,13 @@ extern "system" {
     ) -> c_int;
 }
 
-// Functions that aren't available on every version of Windows that we support,
-// but we still use them and just provide some form of a fallback implementation.
 compat_fn! {
     "kernel32":
-
-    // >= Win10 1607
-    // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
-    pub fn SetThreadDescription(hThread: HANDLE,
-                                lpThreadDescription: LPCWSTR) -> HRESULT {
-        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); E_NOTIMPL
-    }
-
-    // >= Win8 / Server 2012
-    // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime
-    pub fn GetSystemTimePreciseAsFileTime(lpSystemTimeAsFileTime: LPFILETIME)
-                                          -> () {
-        GetSystemTimeAsFileTime(lpSystemTimeAsFileTime)
-    }
-}
-
-compat_fn! {
-    "api-ms-win-core-synch-l1-2-0":
-
-    // >= Windows 8 / Server 2012
-    // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitonaddress
-    pub fn WaitOnAddress(
-        Address: LPVOID,
-        CompareAddress: LPVOID,
-        AddressSize: SIZE_T,
-        dwMilliseconds: DWORD
-    ) -> BOOL {
-        panic!("WaitOnAddress not available")
-    }
-    pub fn WakeByAddressSingle(Address: LPVOID) -> () {
-        // If this api is unavailable, there cannot be anything waiting, because
-        // WaitOnAddress would've panicked. So it's fine to do nothing here.
+    pub fn GetFinalPathNameByHandleW(_hFile: HANDLE,
+                                     _lpszFilePath: LPCWSTR,
+                                     _cchFilePath: DWORD,
+                                     _dwFlags: DWORD) -> DWORD {
+        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
     }
 }
 

@@ -13,51 +13,97 @@
 //!
 //! 3. While CriticalSection is fair and SRWLock is not, the current Rust policy
 //!    is that there are no guarantees of fairness.
+//!
+//! The downside of this approach, however, is that SRWLock is not available on
+//! Windows XP, so we continue to have a fallback implementation where
+//! CriticalSection is used and we keep track of who's holding the mutex to
+//! detect recursive locks.
 
 use crate::cell::UnsafeCell;
 use crate::mem::MaybeUninit;
+use crate::sync::atomic::{AtomicUsize, Ordering};
 use crate::sys::c;
 
 pub struct Mutex {
-    srwlock: UnsafeCell<c::SRWLOCK>,
+    lock: AtomicUsize,
+    held: UnsafeCell<bool>,
 }
-
 // Windows SRW Locks are movable (while not borrowed).
 pub type MovableMutex = Mutex;
 
 unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
 
-#[inline]
-pub unsafe fn raw(m: &Mutex) -> c::PSRWLOCK {
-    m.srwlock.get()
-}
-
 impl Mutex {
     pub const fn new() -> Mutex {
-        Mutex { srwlock: UnsafeCell::new(c::SRWLOCK_INIT) }
+        Mutex { lock: AtomicUsize::new(0), held: UnsafeCell::new(false) }
     }
     #[inline]
     pub unsafe fn init(&mut self) {}
-
-    #[inline]
     pub unsafe fn lock(&self) {
-        c::AcquireSRWLockExclusive(raw(self));
+        let re = self.remutex();
+        (*re).lock();
+        if !self.flag_locked() {
+            (*re).unlock();
+            panic!("cannot recursively lock a mutex");
+        }
     }
-
-    #[inline]
     pub unsafe fn try_lock(&self) -> bool {
-        c::TryAcquireSRWLockExclusive(raw(self)) != 0
+        let re = self.remutex();
+        if !(*re).try_lock() {
+            false
+        } else if self.flag_locked() {
+            true
+        } else {
+            (*re).unlock();
+            false
+        }
     }
-
-    #[inline]
     pub unsafe fn unlock(&self) {
-        c::ReleaseSRWLockExclusive(raw(self));
+        *self.held.get() = false;
+        (*self.remutex()).unlock()
+    }
+    pub unsafe fn destroy(&self) {
+        match self.lock.load(Ordering::SeqCst) {
+            0 => {}
+            n => {
+                Box::from_raw(n as *mut ReentrantMutex).destroy();
+            }
+        }
+    }
+
+    unsafe fn remutex(&self) -> *mut ReentrantMutex {
+        match self.lock.load(Ordering::SeqCst) {
+            0 => {}
+            n => return n as *mut _,
+        }
+        let re = box ReentrantMutex::uninitialized();
+        re.init();
+        let re = Box::into_raw(re);
+        match self.compare_and_swap(0, re as usize, Ordering::SeqCst) {
+            0 => re,
+            n => {
+                Box::from_raw(re).destroy();
+                n as *mut _
+            }
+        }
+    }
+
+    unsafe fn flag_locked(&self) -> bool {
+        if *self.held.get() {
+            false
+        } else {
+            *self.held.get() = true;
+            true
+        }
     }
 
     #[inline]
-    pub unsafe fn destroy(&self) {
-        // SRWLock does not need to be destroyed.
+    fn compare_and_swap(&self, current: usize, new: usize, order: Ordering) -> usize {
+        match self.lock.compare_exchange(current, new, order, order) {
+            Ok(x) => x,
+            Err(x) => x,
+        }
     }
 }
 
@@ -74,7 +120,7 @@ impl ReentrantMutex {
     }
 
     pub unsafe fn init(&self) {
-        c::InitializeCriticalSection(UnsafeCell::raw_get(self.inner.as_ptr()));
+        c::InitializeCriticalSectionAndSpinCount(UnsafeCell::raw_get(self.inner.as_ptr()), 2000);
     }
 
     pub unsafe fn lock(&self) {
