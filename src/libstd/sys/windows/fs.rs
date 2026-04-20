@@ -1,5 +1,6 @@
 use crate::os::windows::prelude::*;
 
+use crate::ffi::{OsStr};
 use crate::ffi::OsString;
 use crate::fmt;
 use crate::io::{self, Error, SeekFrom};
@@ -278,13 +279,19 @@ impl File {
             EndOfFile: size as c::LARGE_INTEGER,
         };
         let size = mem::size_of_val(&info);
-        cvt(unsafe {
-            c::SetFileInformationByHandle(self.handle.raw(),
-                                          c::FileEndOfFileInfo,
-                                          &mut info as *mut _ as *mut _,
-                                          size as c::DWORD)
-        })?;
-        Ok(())
+        unsafe {
+           let mut io: c::IO_STATUS_BLOCK = mem::zeroed();
+           if c::NtSetInformationFile(self.handle.raw(),
+                                      &mut io as *mut _ as *mut _,
+                                      &mut info as *mut _ as *mut _,
+                                      size as c::DWORD,
+                                      20) == 0 {
+              Ok(())
+           }
+           else {
+              Err(crate::io::Error::last_os_error())
+           }
+        }
     }
 
     pub fn file_attr(&self) -> io::Result<FileAttr> {
@@ -395,8 +402,7 @@ impl File {
                      (*info).SubstituteNameLength / 2,
                      false)
                 },
-                _ => return Err(io::Error::new(io::ErrorKind::Other,
-                                               "Unsupported reparse point type"))
+                _ => return Err(crate::io::Error::last_os_error())
             };
             let subst_ptr = path_buffer.offset(subst_off as isize);
             let mut subst = slice::from_raw_parts(subst_ptr, subst_len as usize);
@@ -418,13 +424,20 @@ impl File {
             FileAttributes: perm.attrs,
         };
         let size = mem::size_of_val(&info);
-        cvt(unsafe {
-            c::SetFileInformationByHandle(self.handle.raw(),
-                                          c::FileBasicInfo,
-                                          &mut info as *mut _ as *mut _,
-                                          size as c::DWORD)
-        })?;
-        Ok(())
+
+        unsafe {
+           let mut io: c::IO_STATUS_BLOCK = mem::zeroed();
+           if c::NtSetInformationFile(self.handle.raw(),
+                                      &mut io as *mut _ as *mut _,
+                                      &mut info as *mut _ as *mut _,
+                                      size as c::DWORD,
+                                      4) == 0 {
+              Ok(())
+           }
+           else {
+              Err(crate::io::Error::last_os_error())
+           }
+        }
     }
 }
 
@@ -699,12 +712,51 @@ pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
 }
 
 fn get_path(f: &File) -> io::Result<PathBuf> {
-    super::fill_utf16_buf(|buf, sz| unsafe {
-        c::GetFinalPathNameByHandleW(f.handle.raw(), buf, sz,
-                                     c::VOLUME_NAME_DOS)
-    }, |buf| {
-        PathBuf::from(OsString::from_wide(buf))
-    })
+   const MAX_PATH: usize = 1024;
+   const MAXSIZE: usize = MAX_PATH+4;
+
+   unsafe {
+      let mut drives = [0u16; MAX_PATH];
+      let mut path = [0u16; MAXSIZE];
+      let mut path2 = [0u16; MAX_PATH];
+      let mut sz: c::DWORD=MAXSIZE as u32;
+      if c::NtQueryObject(f.handle.raw(),1,&mut path as *mut _ as *mut _,sz,&mut sz as *mut _ as *mut _) == 0 {
+         sz=*&path[0] as u32;
+         let mut i=4;
+         while path[i] != 0 && i<sz as usize+4{
+            i+=1;
+         }
+         sz=i as u32;
+         i=0;
+         let mut s=4;
+         c::GetLogicalDriveStringsW((MAX_PATH-1) as u32, &mut drives as *mut _ as *mut _);
+         let mut j;
+         while drives[i] != 0 {
+             drives[i+2] = 0;
+             c::QueryDosDeviceW(&mut drives[i] as *mut _ as *mut _,&mut path2 as *mut _ as *mut _, MAX_PATH as u32);
+             j=0;
+             while path2[j] != 0 {
+                j+=1;
+             }
+             if OsString::from_wide(&path2[0..j]) == OsString::from_wide(&path[4..j+4]) {
+                path[j-2]='\\' as u16;
+                path[j-1]='\\' as u16;
+                path[j]='?' as u16;
+                path[j+1]='\\' as u16;
+                path[j+2]=drives[i];
+                path[j+3]=drives[i+1];
+                s=j-2; 
+                break;
+             }
+             i+=4;
+         }
+         testf(OsString::from_wide(&path[s..sz as usize]));
+         Ok(PathBuf::from(OsString::from_wide(&path[s..sz as usize])))
+      }
+      else {
+         Err(crate::io::Error::last_os_error())
+      }
+   }
 }
 
 pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {

@@ -1,42 +1,138 @@
 use crate::cell::UnsafeCell;
+use crate::mem::{MaybeUninit};
+use crate::sync::atomic::{AtomicUsize, Ordering};
 use crate::sys::c;
 
-pub struct RWLock { inner: UnsafeCell<c::SRWLOCK> }
+pub struct RWLock {
+    lock: AtomicUsize,
+    held: UnsafeCell<bool>,
+}
 
 unsafe impl Send for RWLock {}
 unsafe impl Sync for RWLock {}
 
 impl RWLock {
     pub const fn new() -> RWLock {
-        RWLock { inner: UnsafeCell::new(c::SRWLOCK_INIT) }
+        RWLock {
+            lock: AtomicUsize::new(0),
+            held: UnsafeCell::new(false),
+            }
     }
     #[inline]
     pub unsafe fn read(&self) {
-        c::AcquireSRWLockShared(self.inner.get())
+                let re = self.remutex();
+                (*re).lock();
+                if !self.flag_locked() {
+                    (*re).unlock();
+                    panic!("cannot recursively lock a mutex");
+                }
     }
     #[inline]
     pub unsafe fn try_read(&self) -> bool {
-        c::TryAcquireSRWLockShared(self.inner.get()) != 0
+                let re = self.remutex();
+                if !(*re).try_lock() {
+                    false
+                } else if self.flag_locked() {
+                    true
+                } else {
+                    (*re).unlock();
+                    false
+                }
     }
     #[inline]
     pub unsafe fn write(&self) {
-        c::AcquireSRWLockExclusive(self.inner.get())
+                RWLock::read(&self);
+                /*let re = self.remutex();
+                (*re).lock();
+                if !self.flag_locked() {
+                    (*re).unlock();
+                    panic!("cannot recursively lock a mutex");
+                }*/
     }
     #[inline]
     pub unsafe fn try_write(&self) -> bool {
-        c::TryAcquireSRWLockExclusive(self.inner.get()) != 0
+                RWLock::try_read(&self)
+                /*let re = self.remutex();
+                if !(*re).try_lock() {
+                    false
+                } else if self.flag_locked() {
+                    true
+                } else {
+                    (*re).unlock();
+                    false
+                }*/
     }
     #[inline]
     pub unsafe fn read_unlock(&self) {
-        c::ReleaseSRWLockShared(self.inner.get())
+        *self.held.get() = false;
+        (*self.remutex()).unlock();
     }
     #[inline]
     pub unsafe fn write_unlock(&self) {
-        c::ReleaseSRWLockExclusive(self.inner.get())
+        RWLock::read_unlock(&self)
     }
 
     #[inline]
     pub unsafe fn destroy(&self) {
-        // ...
+        match self.lock.load(Ordering::SeqCst) {
+            0 => {}
+            n => { Box::from_raw(n as *mut ReentrantMutex).destroy(); }
+        }
+    }
+
+    unsafe fn remutex(&self) -> *mut ReentrantMutex {
+        match self.lock.load(Ordering::SeqCst) {
+            0 => {}
+            n => return n as *mut _,
+        }
+        let mut re = box ReentrantMutex::uninitialized();
+        re.init();
+        let re = Box::into_raw(re);
+        match self.lock.compare_and_swap(0, re as usize, Ordering::SeqCst) {
+            0 => re,
+            n => { Box::from_raw(re).destroy(); n as *mut _ }
+        }
+    }
+
+    unsafe fn flag_locked(&self) -> bool {
+        if *self.held.get() {
+            false
+        } else {
+            *self.held.get() = true;
+            true
+        }
+
+    }
+}
+            
+pub struct ReentrantMutex { inner: UnsafeCell<MaybeUninit<c::CRITICAL_SECTION>> }
+
+unsafe impl Send for ReentrantMutex {}
+unsafe impl Sync for ReentrantMutex {}
+
+impl ReentrantMutex {
+    pub fn uninitialized() -> ReentrantMutex {
+        ReentrantMutex { inner: UnsafeCell::new(MaybeUninit::uninit()) }
+    }
+
+    pub unsafe fn init(&mut self) {
+        c::InitializeCriticalSection((&mut *self.inner.get()).as_mut_ptr());
+    }
+
+    pub unsafe fn lock(&self) {
+        c::EnterCriticalSection((&mut *self.inner.get()).as_mut_ptr());
+    }
+
+    #[inline]
+    pub unsafe fn try_lock(&self) -> bool {
+        c::TryEnterCriticalSection((&mut *self.inner.get()).as_mut_ptr()) != 0
+    }
+
+    pub unsafe fn unlock(&self) {
+        c::LeaveCriticalSection((&mut *self.inner.get()).as_mut_ptr());
+    }
+
+    pub unsafe fn destroy(&self) {
+        c::DeleteCriticalSection((&mut *self.inner.get()).as_mut_ptr());
     }
 }
