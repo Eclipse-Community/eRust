@@ -311,15 +311,19 @@ impl File {
     pub fn truncate(&self, size: u64) -> io::Result<()> {
         let mut info = c::FILE_END_OF_FILE_INFO { EndOfFile: size as c::LARGE_INTEGER };
         let size = mem::size_of_val(&info);
-        cvt(unsafe {
-            c::SetFileInformationByHandle(
-                self.handle.raw(),
-                c::FileEndOfFileInfo,
-                &mut info as *mut _ as *mut _,
-                size as c::DWORD,
-            )
-        })?;
-        Ok(())
+        unsafe {
+            let mut io: c::IO_STATUS_BLOCK = mem::zeroed();
+            if c::NtSetInformationFile(self.handle.raw(),
+                                       &mut io as *mut _ as *mut _,
+                                       &mut info as *mut _ as *mut _,
+                                       size as c::DWORD,
+                                       20) == 0 {
+                Ok(())
+            }
+            else {
+                Err(crate::io::Error::last_os_error())
+            }
+        }
     }
 
     #[cfg(not(target_vendor = "uwp"))]
@@ -539,15 +543,19 @@ impl File {
             FileAttributes: perm.attrs,
         };
         let size = mem::size_of_val(&info);
-        cvt(unsafe {
-            c::SetFileInformationByHandle(
-                self.handle.raw(),
-                c::FileBasicInfo,
-                &mut info as *mut _ as *mut _,
-                size as c::DWORD,
-            )
-        })?;
-        Ok(())
+        unsafe {
+            let mut io: c::IO_STATUS_BLOCK = mem::zeroed();
+            if c::NtSetInformationFile(self.handle.raw(),
+                                       &mut io as *mut _ as *mut _,
+                                       &mut info as *mut _ as *mut _,
+                                       size as c::DWORD,
+                                       4) == 0 {
+                Ok(())
+            }
+            else {
+                Err(crate::io::Error::last_os_error())
+            }
+        }
     }
 }
 
@@ -831,12 +839,53 @@ pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
 }
 
 fn get_path(f: &File) -> io::Result<PathBuf> {
-    super::fill_utf16_buf(
-        |buf, sz| unsafe {
-            c::GetFinalPathNameByHandleW(f.handle.raw(), buf, sz, c::VOLUME_NAME_DOS)
-        },
-        |buf| PathBuf::from(OsString::from_wide(buf)),
-    )
+    const MAX_PATH: c::DWORD = 1024;
+    const MAXSIZE: c::DWORD = MAX_PATH+4;
+    unsafe {
+        let mut drives = [0u16; MAX_PATH as usize];
+        let mut path = [0u16; MAXSIZE as usize];
+        let mut path2 = [0u16; MAX_PATH as usize];
+        let mut sz: c::DWORD=MAXSIZE;
+        let mut ss: usize;
+        if c::NtQueryObject(f.handle.raw(),1,&mut path as *mut _ as *mut _,sz,&mut sz as *mut _ as *mut _) == 0 {
+            let mut i=0;
+            while path[i] != '\\' as u16 && i<sz as usize {
+               i+=1;
+            }
+            ss=i;
+            while path[i] != 0 && i<sz as usize {
+               i+=1;
+            }
+            sz=i as c::DWORD;
+            i=0;
+            c::GetLogicalDriveStringsW(MAX_PATH-1, &mut drives as *mut _ as *mut _);
+            let mut j;
+            while drives[i] != 0 {
+                drives[i+2] = 0;
+                c::QueryDosDeviceW(&mut drives[i] as *mut _ as *mut _,&mut path2 as *mut _ as *mut _, MAX_PATH);
+                j=0;
+                while path2[j] != 0 {
+                   j+=1;
+                }
+                if OsString::from_wide(&path2[0..j]) == OsString::from_wide(&path[ss..j+ss]) {
+                   j=ss+j;
+                   path[j-6]='\\' as u16;
+                   path[j-5]='\\' as u16;
+                   path[j-4]='?' as u16;
+                   path[j-3]='\\' as u16;
+                   path[j-2]=drives[i];
+                   path[j-1]=drives[i+1];
+                   ss=j-6; 
+                   break;
+                }
+                i+=4;
+            }
+            Ok(PathBuf::from(OsString::from_wide(&path[ss..sz as usize])))
+        }
+        else {
+        Err(crate::io::Error::last_os_error())
+        }
+    }
 }
 
 pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
