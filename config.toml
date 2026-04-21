@@ -38,8 +38,6 @@ debug = false
 dist-src = false
 optimize = true
 optimize-tests = true
-thin-lto-import-instr-limit = 100
-debuginfo-level = 0
 debug-assertions = false
 
 # for creating a downloadable package: python x.py dist.
