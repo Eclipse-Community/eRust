@@ -1,0 +1,22 @@
+error: needlessly taken reference of both operands
+  --> $DIR/op_ref.rs:10:15
+   |
+LL |     let foo = &5 - &6;
+   |               ^^^^^^^
+   |
+   = note: `-D clippy::op-ref` implied by `-D warnings`
+help: use the values directly
+   |
+LL |     let foo = 5 - 6;
+   |               ^   ^
+
+error: taken reference of right operand
+  --> $DIR/op_ref.rs:18:8
+   |
+LL |     if b < &a {
+   |        ^^^^--
+   |            |
+   |            help: use the right value directly: `a`
+
+error: aborting due to 2 previous errors
+

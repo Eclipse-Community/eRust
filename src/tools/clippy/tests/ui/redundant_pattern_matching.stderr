@@ -1,0 +1,82 @@
+error: redundant pattern matching, consider using `is_ok()`
+  --> $DIR/redundant_pattern_matching.rs:5:12
+   |
+LL |     if let Ok(_) = Ok::<i32, i32>(42) {}
+   |     -------^^^^^------------------------ help: try this: `if Ok::<i32, i32>(42).is_ok()`
+   |
+   = note: `-D clippy::redundant-pattern-matching` implied by `-D warnings`
+
+error: redundant pattern matching, consider using `is_err()`
+  --> $DIR/redundant_pattern_matching.rs:7:12
+   |
+LL |     if let Err(_) = Err::<i32, i32>(42) {}
+   |     -------^^^^^^------------------------- help: try this: `if Err::<i32, i32>(42).is_err()`
+
+error: redundant pattern matching, consider using `is_none()`
+  --> $DIR/redundant_pattern_matching.rs:9:12
+   |
+LL |     if let None = None::<()> {}
+   |     -------^^^^---------------- help: try this: `if None::<()>.is_none()`
+
+error: redundant pattern matching, consider using `is_some()`
+  --> $DIR/redundant_pattern_matching.rs:11:12
+   |
+LL |     if let Some(_) = Some(42) {}
+   |     -------^^^^^^^-------------- help: try this: `if Some(42).is_some()`
+
+error: redundant pattern matching, consider using `is_ok()`
+  --> $DIR/redundant_pattern_matching.rs:25:5
+   |
+LL | /     match Ok::<i32, i32>(42) {
+LL | |         Ok(_) => true,
+LL | |         Err(_) => false,
+LL | |     };
+   | |_____^ help: try this: `Ok::<i32, i32>(42).is_ok()`
+
+error: redundant pattern matching, consider using `is_err()`
+  --> $DIR/redundant_pattern_matching.rs:30:5
+   |
+LL | /     match Ok::<i32, i32>(42) {
+LL | |         Ok(_) => false,
+LL | |         Err(_) => true,
+LL | |     };
+   | |_____^ help: try this: `Ok::<i32, i32>(42).is_err()`
+
+error: redundant pattern matching, consider using `is_err()`
+  --> $DIR/redundant_pattern_matching.rs:35:5
+   |
+LL | /     match Err::<i32, i32>(42) {
+LL | |         Ok(_) => false,
+LL | |         Err(_) => true,
+LL | |     };
+   | |_____^ help: try this: `Err::<i32, i32>(42).is_err()`
+
+error: redundant pattern matching, consider using `is_ok()`
+  --> $DIR/redundant_pattern_matching.rs:40:5
+   |
+LL | /     match Err::<i32, i32>(42) {
+LL | |         Ok(_) => true,
+LL | |         Err(_) => false,
+LL | |     };
+   | |_____^ help: try this: `Err::<i32, i32>(42).is_ok()`
+
+error: redundant pattern matching, consider using `is_some()`
+  --> $DIR/redundant_pattern_matching.rs:45:5
+   |
+LL | /     match Some(42) {
+LL | |         Some(_) => true,
+LL | |         None => false,
+LL | |     };
+   | |_____^ help: try this: `Some(42).is_some()`
+
+error: redundant pattern matching, consider using `is_none()`
+  --> $DIR/redundant_pattern_matching.rs:50:5
+   |
+LL | /     match None::<()> {
+LL | |         Some(_) => false,
+LL | |         None => true,
+LL | |     };
+   | |_____^ help: try this: `None::<()>.is_none()`
+
+error: aborting due to 10 previous errors
+

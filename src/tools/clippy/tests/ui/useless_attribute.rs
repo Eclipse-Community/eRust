@@ -1,0 +1,35 @@
+// aux-build:proc_macro_derive.rs
+
+#![warn(clippy::useless_attribute)]
+
+#[allow(dead_code)]
+#[cfg_attr(feature = "cargo-clippy", allow(dead_code))]
+#[rustfmt::skip]
+#[cfg_attr(feature = "cargo-clippy",
+           allow(dead_code))]
+#[allow(unused_imports)]
+#[allow(unused_extern_crates)]
+#[macro_use]
+extern crate clippy_lints;
+
+#[macro_use]
+extern crate proc_macro_derive;
+
+// don't lint on unused_import for `use` items
+#[allow(unused_imports)]
+use std::collections;
+
+// don't lint on deprecated for `use` items
+mod foo {
+    #[deprecated]
+    pub struct Bar;
+}
+#[allow(deprecated)]
+pub use foo::Bar;
+
+// This should not trigger the lint. There's lint level definitions inside the external derive
+// that would trigger the useless_attribute lint.
+#[derive(DeriveSomething)]
+struct Baz;
+
+fn main() {}

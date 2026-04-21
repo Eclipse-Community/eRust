@@ -1,0 +1,194 @@
+error: called `map(f)` on an Result value where `f` is a unit function
+  --> $DIR/result_map_unit_fn.rs:34:5
+   |
+LL |     x.field.map(do_nothing);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(x_field) = x.field { do_nothing(...) }`
+   |
+   = note: `-D clippy::result-map-unit-fn` implied by `-D warnings`
+
+error: called `map(f)` on an Result value where `f` is a unit function
+  --> $DIR/result_map_unit_fn.rs:36:5
+   |
+LL |     x.field.map(do_nothing);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(x_field) = x.field { do_nothing(...) }`
+
+error: called `map(f)` on an Result value where `f` is a unit function
+  --> $DIR/result_map_unit_fn.rs:38:5
+   |
+LL |     x.field.map(diverge);
+   |     ^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(x_field) = x.field { diverge(...) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:44:5
+   |
+LL |     x.field.map(|value| x.do_result_nothing(value + captured));
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { x.do_result_nothing(value + captured) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:46:5
+   |
+LL |     x.field.map(|value| { x.do_result_plus_one(value + captured); });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { x.do_result_plus_one(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:49:5
+   |
+LL |     x.field.map(|value| do_nothing(value + captured));
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { do_nothing(value + captured) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:51:5
+   |
+LL |     x.field.map(|value| { do_nothing(value + captured) });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { do_nothing(value + captured) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:53:5
+   |
+LL |     x.field.map(|value| { do_nothing(value + captured); });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { do_nothing(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:55:5
+   |
+LL |     x.field.map(|value| { { do_nothing(value + captured); } });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { do_nothing(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:58:5
+   |
+LL |     x.field.map(|value| diverge(value + captured));
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { diverge(value + captured) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:60:5
+   |
+LL |     x.field.map(|value| { diverge(value + captured) });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { diverge(value + captured) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:62:5
+   |
+LL |     x.field.map(|value| { diverge(value + captured); });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { diverge(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:64:5
+   |
+LL |     x.field.map(|value| { { diverge(value + captured); } });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { diverge(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:69:5
+   |
+LL |     x.field.map(|value| { let y = plus_one(value + captured); });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { let y = plus_one(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:71:5
+   |
+LL |     x.field.map(|value| { plus_one(value + captured); });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { plus_one(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:73:5
+   |
+LL |     x.field.map(|value| { { plus_one(value + captured); } });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { plus_one(value + captured); }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:76:5
+   |
+LL |     x.field.map(|ref value| { do_nothing(value + captured) });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(ref value) = x.field { do_nothing(value + captured) }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:79:5
+   |
+LL |     x.field.map(|value| { do_nothing(value); do_nothing(value) });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { ... }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:81:5
+   |
+LL |     x.field.map(|value| if value > 0 { do_nothing(value); do_nothing(value) });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { ... }`
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:85:5
+   |
+LL |        x.field.map(|value| {
+   |   _____^
+   |  |_____|
+   | ||
+LL | ||         do_nothing(value);
+LL | ||         do_nothing(value)
+LL | ||     });
+   | ||______^- help: try this: `if let Ok(value) = x.field { ... }`
+   | |_______|
+   | 
+
+error: called `map(f)` on an Result value where `f` is a unit closure
+  --> $DIR/result_map_unit_fn.rs:89:5
+   |
+LL |     x.field.map(|value| { do_nothing(value); do_nothing(value); });
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(value) = x.field { ... }`
+
+error: called `map(f)` on an Result value where `f` is a unit function
+  --> $DIR/result_map_unit_fn.rs:93:5
+   |
+LL |     "12".parse::<i32>().map(diverge);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(_) = "12".parse::<i32>() { diverge(...) }`
+
+error: called `map(f)` on an Result value where `f` is a unit function
+  --> $DIR/result_map_unit_fn.rs:99:5
+   |
+LL |     y.map(do_nothing);
+   |     ^^^^^^^^^^^^^^^^^-
+   |     |
+   |     help: try this: `if let Ok(_y) = y { do_nothing(...) }`
+
+error: aborting due to 23 previous errors
+
