@@ -3,13 +3,12 @@
 optimize = true
 thin-lto = false
 link-shared = false
-ninja = true
+ninja = false
 targets = "X86"
 link-jobs = 0
-cflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
-cxxflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
+cflags = "-Ob2ity"
+cxxflags = "-Ob2ity"
 ldflags = "-Wl,-O3 -msse2"
-clang-cl = "C:/Program Files/LLVM/bin/clang-cl.exe"
 version-suffix = "-eRust-dev"
 
 [build]
@@ -37,13 +36,9 @@ codegen-units = 1
 codegen-units-std = 1
 debug = false
 dist-src = false
-#jemalloc = true
-lld = true
-#lto = "thin"
 optimize = true
 optimize-tests = true
 thin-lto-import-instr-limit = 100
-use-lld = true
 debuginfo-level = 0
 debug-assertions = false
 
