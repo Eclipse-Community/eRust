@@ -177,7 +177,8 @@ class is_trivially_copyable {
       (has_deleted_copy_assign || has_trivial_copy_assign) &&
       (has_deleted_copy_constructor || has_trivial_copy_constructor);
 
-#ifdef HAVE_STD_IS_TRIVIALLY_COPYABLE
+  // due to DR 1734, a type can be std::is_trivially_copyable but not llvm::is_trivially_copyable
+#if 0
   static_assert(value == std::is_trivially_copyable<T>::value,
                 "inconsistent behavior between llvm:: and std:: implementation of is_trivially_copyable");
 #endif
