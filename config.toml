@@ -26,11 +26,13 @@ target = [
     "x86_64-pc-windows-msvc",
 ]
 
-docs = false
+docs = true
 extended = true
 tools = [
     "cargo",
     "rustfmt",
+    "analysis",
+    "clippy",
 ]
 #verbose = 1
 
