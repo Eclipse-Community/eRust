@@ -19,127 +19,82 @@
 //! function is called. In the worst case, multiple threads may all end up
 //! importing the same function unnecessarily.
 
-use crate::ffi::{c_void, CStr};
-use crate::ptr::NonNull;
-use crate::sys::c;
-
-/// Helper macro for creating CStrs from literals and symbol names.
-macro_rules! ansi_str {
-    (sym $ident:ident) => {{
-        #[allow(unused_unsafe)]
-        crate::sys::compat::const_cstr_from_bytes(concat!(stringify!($ident), "\0").as_bytes())
-    }};
-    ($lit:literal) => {{ crate::sys::compat::const_cstr_from_bytes(concat!($lit, "\0").as_bytes()) }};
-}
-
-/// Creates a C string wrapper from a byte slice, in a constant context.
-///
-/// This is a utility function used by the [`ansi_str`] macro.
-///
-/// # Panics
-///
-/// Panics if the slice is not null terminated or contains nulls, except as the last item
-pub(crate) const fn const_cstr_from_bytes(bytes: &'static [u8]) -> &'static CStr {
-    if !matches!(bytes.last(), Some(&0)) {
-        panic!("A CStr must be null terminated");
-    }
-    let mut i = 0;
-    // At this point `len()` is at least 1.
-    while i < bytes.len() - 1 {
-        if bytes[i] == 0 {
-            panic!("A CStr must not have interior nulls")
-        }
-        i += 1;
-    }
-    // SAFETY: The safety is ensured by the above checks.
-    unsafe { crate::ffi::CStr::from_bytes_with_nul_unchecked(bytes) }
-}
-
-/// Represents a loaded module.
-///
-/// Note that the modules std depends on must not be unloaded.
-/// Therefore a `Module` is always valid for the lifetime of std.
-#[derive(Copy, Clone)]
-pub(in crate::sys) struct Module(NonNull<c_void>);
-impl Module {
-    /// Try to get a handle to a loaded module.
-    ///
-    /// # SAFETY
-    ///
-    /// This should only be use for modules that exist for the lifetime of std
-    /// (e.g. kernel32 and ntdll).
-    pub unsafe fn new(name: &CStr) -> Option<Self> {
-        // SAFETY: A CStr is always null terminated.
-        let module = c::GetModuleHandleA(name.as_ptr());
-        NonNull::new(module).map(Self)
-    }
-
-    // Try to get the address of a function.
-    pub fn proc_address(self, name: &CStr) -> Option<NonNull<c_void>> {
-        // SAFETY:
-        // `self.0` will always be a valid module.
-        // A CStr is always null terminated.
-        let proc = unsafe { c::GetProcAddress(self.0.as_ptr(), name.as_ptr()) };
-        NonNull::new(proc)
-    }
-}
-
 /// Load a function or use a fallback implementation if that fails.
-macro_rules! compat_fn_with_fallback {
-    (pub static $module:ident: &CStr = $name:expr; $(
+macro_rules! compat_fn {
+    ($module:literal: $(
         $(#[$meta:meta])*
         $vis:vis fn $symbol:ident($($argname:ident: $argtype:ty),*) -> $rettype:ty $fallback_body:block
-    )*) => (
-        pub static $module: &CStr = $name;
-    $(
+    )*) => ($(
         $(#[$meta])*
         pub mod $symbol {
             #[allow(unused_imports)]
             use super::*;
             use crate::mem;
-            use crate::ffi::CStr;
-            use crate::sync::atomic::{AtomicPtr, Ordering};
-            use crate::sys::compat::Module;
 
             type F = unsafe extern "system" fn($($argtype),*) -> $rettype;
 
-            /// `PTR` contains a function pointer to one of three functions.
-            /// It starts with the `load` function.
-            /// When that is called it attempts to load the requested symbol.
-            /// If it succeeds, `PTR` is set to the address of that symbol.
-            /// If it fails, then `PTR` is set to `fallback`.
-            static PTR: AtomicPtr<c_void> = AtomicPtr::new(load as *mut _);
+            /// Points to the DLL import, or the fallback function.
+            ///
+            /// This static can be an ordinary, unsynchronized, mutable static because
+            /// we guarantee that all of the writes finish during CRT initialization,
+            /// and all of the reads occur after CRT initialization.
+            static mut PTR: Option<F> = None;
 
-            unsafe extern "system" fn load($($argname: $argtype),*) -> $rettype {
-                let func = load_from_module(Module::new($module));
-                func($($argname),*)
+            /// This symbol is what allows the CRT to find the `init` function and call it.
+            /// It is marked `#[used]` because otherwise Rust would assume that it was not
+            /// used, and would remove it.
+            #[used]
+            #[link_section = ".CRT$XCU"]
+            static INIT_TABLE_ENTRY: unsafe extern "C" fn() = init;
+
+            unsafe extern "C" fn init() {
+                PTR = get_f();
             }
 
-            fn load_from_module(module: Option<Module>) -> F {
+            unsafe extern "C" fn get_f() -> Option<F> {
+                // There is no locking here. This code is executed before main() is entered, and
+                // is guaranteed to be single-threaded.
+                //
+                // DO NOT do anything interesting or complicated in this function! DO NOT call
+                // any Rust functions or CRT functions, if those functions touch any global state,
+                // because this function runs during global initialization. For example, DO NOT
+                // do any dynamic allocation, don't call LoadLibrary, etc.
+                let module_name: *const u8 = concat!($module, "\0").as_ptr();
+                let symbol_name: *const u8 = concat!(stringify!($symbol), "\0").as_ptr();
+                let module_handle = $crate::sys::c::GetModuleHandleA(module_name as *const i8);
+                if !module_handle.is_null() {
+                    let ptr = $crate::sys::c::GetProcAddress(module_handle, symbol_name as *const i8);
+                    if !ptr.is_null() {
+                        // Transmute to the right function pointer type.
+                        return Some(mem::transmute(ptr));
+                    }
+                }
+                return None;
+            }
+
+            #[allow(dead_code)]
+            #[inline(always)]
+            pub fn option() -> Option<F> {
                 unsafe {
-                    static SYMBOL_NAME: &CStr = ansi_str!(sym $symbol);
-                    if let Some(f) = module.and_then(|m| m.proc_address(SYMBOL_NAME)) {
-                        PTR.store(f.as_ptr(), Ordering::Relaxed);
-                        mem::transmute(f)
+                    if cfg!(miri) {
+                        // Miri does not run `init`, so we just call `get_f` each time.
+                        get_f()
                     } else {
-                        PTR.store(fallback as *mut _, Ordering::Relaxed);
-                        fallback
+                        PTR
                     }
                 }
             }
 
-            #[allow(unused_variables)]
-            unsafe extern "system" fn fallback($($argname: $argtype),*) -> $rettype {
+            #[allow(dead_code)]
+            pub unsafe fn call($($argname: $argtype),*) -> $rettype {
+                if let Some(ptr) = option() {
+                    return ptr($($argname),*);
+                }
                 $fallback_body
             }
-
-            #[inline(always)]
-            pub unsafe fn call($($argname: $argtype),*) -> $rettype {
-                let func: F = mem::transmute(PTR.load(Ordering::Relaxed));
-                func($($argname),*)
-            }
         }
+
         $(#[$meta])*
-        $vis use $symbol::call as $symbol;
+        pub use $symbol::call as $symbol;
     )*)
 }
