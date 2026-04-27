@@ -48,6 +48,7 @@ pub type LPBYTE = *mut BYTE;
 pub type LPCSTR = *const CHAR;
 pub type LPCWSTR = *const WCHAR;
 pub type LPDWORD = *mut DWORD;
+pub type LPLONG = *mut LONG;
 pub type LPHANDLE = *mut HANDLE;
 pub type LPOVERLAPPED = *mut OVERLAPPED;
 pub type LPPROCESS_INFORMATION = *mut PROCESS_INFORMATION;
@@ -65,9 +66,7 @@ pub type LPWSABUF = *mut WSABUF;
 pub type LPWSAOVERLAPPED = *mut c_void;
 pub type LPWSAOVERLAPPED_COMPLETION_ROUTINE = *mut c_void;
 
-pub type PCONDITION_VARIABLE = *mut CONDITION_VARIABLE;
 pub type PLARGE_INTEGER = *mut c_longlong;
-pub type PSRWLOCK = *mut SRWLOCK;
 
 pub type SOCKET = crate::os::windows::raw::SOCKET;
 pub type socklen_t = c_int;
@@ -180,9 +179,6 @@ pub const DLL_PROCESS_DETACH: DWORD = 0;
 pub const INFINITE: DWORD = !0;
 
 pub const DUPLICATE_SAME_ACCESS: DWORD = 0x00000002;
-
-pub const CONDITION_VARIABLE_INIT: CONDITION_VARIABLE = CONDITION_VARIABLE { ptr: ptr::null_mut() };
-pub const SRWLOCK_INIT: SRWLOCK = SRWLOCK { ptr: ptr::null_mut() };
 
 pub const DETACHED_PROCESS: DWORD = 0x00000008;
 pub const CREATE_NEW_PROCESS_GROUP: DWORD = 0x00000200;
@@ -516,12 +512,13 @@ pub type LPPROGRESS_ROUTINE = crate::option::Option<
 >;
 
 #[repr(C)]
-pub struct CONDITION_VARIABLE {
-    pub ptr: LPVOID,
-}
-#[repr(C)]
-pub struct SRWLOCK {
-    pub ptr: LPVOID,
+pub struct CRITICAL_SECTION {
+    CriticalSectionDebug: LPVOID,
+    LockCount: LONG,
+    RecursionCount: LONG,
+    OwningThread: HANDLE,
+    LockSemaphore: HANDLE,
+    SpinCount: ULONG_PTR,
 }
 
 #[repr(C)]
@@ -889,6 +886,10 @@ extern "system" {
         lpThreadId: LPDWORD,
     ) -> HandleOrNull;
     pub fn WaitForSingleObject(hHandle: HANDLE, dwMilliseconds: DWORD) -> DWORD;
+    pub fn SetEvent(hEvent: HANDLE) -> BOOL;
+    pub fn CreateSemaphoreW(lpSemaphoreAttributes: LPSECURITY_ATTRIBUTES, lInitialCount: LONG, lMaximumCount: LONG, lpName: LPCWSTR) -> HANDLE;
+    pub fn ReleaseSemaphore(hSemaphore: HANDLE, lReleaseCount: LONG, lpPreviousCount: LPLONG) -> BOOL;
+    pub fn ResetEvent(hEvent: HANDLE) -> BOOL;
     pub fn SwitchToThread() -> BOOL;
     pub fn Sleep(dwMilliseconds: DWORD);
     pub fn SleepEx(dwMilliseconds: DWORD, bAlertable: BOOL) -> DWORD;
@@ -1037,22 +1038,6 @@ extern "system" {
         lpTargetFileName: LPCWSTR,
         dwFlags: DWORD,
     ) -> BOOLEAN;
-    pub fn SleepConditionVariableSRW(
-        ConditionVariable: PCONDITION_VARIABLE,
-        SRWLock: PSRWLOCK,
-        dwMilliseconds: DWORD,
-        Flags: ULONG,
-    ) -> BOOL;
-
-    pub fn WakeConditionVariable(ConditionVariable: PCONDITION_VARIABLE);
-    pub fn WakeAllConditionVariable(ConditionVariable: PCONDITION_VARIABLE);
-
-    pub fn AcquireSRWLockExclusive(SRWLock: PSRWLOCK);
-    pub fn AcquireSRWLockShared(SRWLock: PSRWLOCK);
-    pub fn ReleaseSRWLockExclusive(SRWLock: PSRWLOCK);
-    pub fn ReleaseSRWLockShared(SRWLock: PSRWLOCK);
-    pub fn TryAcquireSRWLockExclusive(SRWLock: PSRWLOCK) -> BOOLEAN;
-    pub fn TryAcquireSRWLockShared(SRWLock: PSRWLOCK) -> BOOLEAN;
 
     pub fn CompareStringOrdinal(
         lpString1: LPCWSTR,
@@ -1068,6 +1053,22 @@ extern "system" {
         lpFilePart: *mut LPWSTR,
     ) -> DWORD;
     pub fn GetFileAttributesW(lpFileName: LPCWSTR) -> DWORD;
+    pub fn InitializeCriticalSectionAndSpinCount(CriticalSection: *mut CRITICAL_SECTION, dwSpinCount: DWORD) -> BOOL;
+    pub fn EnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+    pub fn TryEnterCriticalSection(CriticalSection: *mut CRITICAL_SECTION) -> BOOL;
+    pub fn LeaveCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+    pub fn DeleteCriticalSection(CriticalSection: *mut CRITICAL_SECTION);
+}
+
+#[link(name = "ntdll")]
+extern "system" {
+   pub fn NtSetInformationFile(
+       hFile: HANDLE,
+       IoStatusBlock: PIO_STATUS_BLOCK,
+       FileInformation: LPVOID,
+       Length: ULONG,
+       FileInformationClass: UINT,
+   ) -> NTSTATUS;
 }
 
 #[link(name = "ntdll")]
