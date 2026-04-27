@@ -17,6 +17,9 @@ impl Mutex {
     }
 
     #[inline]
+    pub unsafe fn init(&mut self) {}
+
+    #[inline]
     pub unsafe fn lock(&self) {
         assert_eq!(self.locked.replace(true), false, "cannot recursively acquire mutex");
     }
