@@ -8,6 +8,7 @@ use crate::io::prelude::*;
 use crate::cell::{Cell, RefCell};
 use crate::fmt;
 use crate::io::{self, BufReader, IoSlice, IoSliceMut, LineWriter, Lines};
+use crate::pin::Pin;
 use crate::sync::atomic::{AtomicBool, Ordering};
 use crate::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use crate::sys::stdio;
@@ -525,7 +526,7 @@ pub struct Stdout {
     // FIXME: this should be LineWriter or BufWriter depending on the state of
     //        stdout (tty or not). Note that if this is not line buffered it
     //        should also flush-on-panic or some form of flush-on-abort.
-    inner: &'static ReentrantMutex<RefCell<LineWriter<StdoutRaw>>>,
+    inner: Pin<&'static ReentrantMutex<RefCell<LineWriter<StdoutRaw>>>>,
 }
 
 /// A locked reference to the [`Stdout`] handle.
@@ -602,20 +603,24 @@ static STDOUT: OnceLock<ReentrantMutex<RefCell<LineWriter<StdoutRaw>>>> = OnceLo
 #[stable(feature = "rust1", since = "1.0.0")]
 pub fn stdout() -> Stdout {
     Stdout {
-        inner: STDOUT
-            .get_or_init(|| ReentrantMutex::new(RefCell::new(LineWriter::new(stdout_raw())))),
+        inner: Pin::static_ref(&STDOUT).get_or_init_pin(
+            || unsafe { ReentrantMutex::new(RefCell::new(LineWriter::new(stdout_raw()))) },
+            |mutex| unsafe { mutex.init() },
+        ),
     }
 }
 
 pub fn cleanup() {
-    // Flush the data and disable buffering during shutdown
-    // by replacing the line writer by one with zero
-    // buffering capacity.
-    // We use try_lock() instead of lock(), because someone
-    // might have leaked a StdoutLock, which would
-    // otherwise cause a deadlock here.
-    if let Some(lock) = STDOUT.get().and_then(ReentrantMutex::try_lock) {
-        *lock.borrow_mut() = LineWriter::with_capacity(0, stdout_raw());
+    if let Some(instance) = STDOUT.get() {
+        // Flush the data and disable buffering during shutdown
+        // by replacing the line writer by one with zero
+        // buffering capacity.
+        // We use try_lock() instead of lock(), because someone
+        // might have leaked a StdoutLock, which would
+        // otherwise cause a deadlock here.
+        if let Some(lock) = Pin::static_ref(instance).try_lock() {
+            *lock.borrow_mut() = LineWriter::with_capacity(0, stdout_raw());
+        }
     }
 }
 
@@ -756,7 +761,7 @@ impl fmt::Debug for StdoutLock<'_> {
 /// standard library or via raw Windows API calls, will fail.
 #[stable(feature = "rust1", since = "1.0.0")]
 pub struct Stderr {
-    inner: &'static ReentrantMutex<RefCell<StderrRaw>>,
+    inner: Pin<&'static ReentrantMutex<RefCell<StderrRaw>>>,
 }
 
 /// A locked reference to the [`Stderr`] handle.
@@ -829,12 +834,16 @@ pub struct StderrLock<'a> {
 #[stable(feature = "rust1", since = "1.0.0")]
 pub fn stderr() -> Stderr {
     // Note that unlike `stdout()` we don't use `at_exit` here to register a
-    // destructor. Stderr is not buffered, so there's no need to run a
+    // destructor. Stderr is not buffered , so there's no need to run a
     // destructor for flushing the buffer
-    static INSTANCE: ReentrantMutex<RefCell<StderrRaw>> =
-        ReentrantMutex::new(RefCell::new(stderr_raw()));
+    static INSTANCE: OnceLock<ReentrantMutex<RefCell<StderrRaw>>> = OnceLock::new();
 
-    Stderr { inner: &INSTANCE }
+    Stderr {
+        inner: Pin::static_ref(&INSTANCE).get_or_init_pin(
+            || unsafe { ReentrantMutex::new(RefCell::new(stderr_raw())) },
+            |mutex| unsafe { mutex.init() },
+        ),
+    }
 }
 
 impl Stderr {

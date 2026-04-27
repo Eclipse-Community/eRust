@@ -37,6 +37,8 @@ impl Mutex {
     pub const fn new() -> Mutex {
         Mutex { srwlock: UnsafeCell::new(c::SRWLOCK_INIT) }
     }
+    #[inline]
+    pub unsafe fn init(&mut self) {}
 
     #[inline]
     pub unsafe fn lock(&self) {
