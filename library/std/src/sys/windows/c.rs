@@ -26,7 +26,6 @@ pub type NonZeroDWORD = NonZero_c_ulong;
 pub type HANDLE = LPVOID;
 pub type HINSTANCE = HANDLE;
 pub type HMODULE = HINSTANCE;
-pub type HRESULT = LONG;
 pub type BOOL = c_int;
 pub type BYTE = u8;
 pub type BOOLEAN = BYTE;
@@ -171,8 +170,6 @@ pub const STD_OUTPUT_HANDLE: DWORD = -11i32 as DWORD;
 pub const STD_ERROR_HANDLE: DWORD = -12i32 as DWORD;
 
 pub const PROGRESS_CONTINUE: DWORD = 0;
-
-pub const E_NOTIMPL: HRESULT = 0x80004001u32 as HRESULT;
 
 pub const INVALID_HANDLE_VALUE: HANDLE = ptr::invalid_mut(!0);
 
@@ -905,7 +902,6 @@ extern "system" {
     pub fn GetCommandLineW() -> LPWSTR;
     pub fn GetTempPathW(nBufferLength: DWORD, lpBuffer: LPCWSTR) -> DWORD;
     pub fn GetCurrentProcess() -> HANDLE;
-    pub fn GetCurrentThread() -> HANDLE;
     pub fn GetStdHandle(which: DWORD) -> HANDLE;
     pub fn ExitProcess(uExitCode: c_uint) -> !;
     pub fn DeviceIoControl(
