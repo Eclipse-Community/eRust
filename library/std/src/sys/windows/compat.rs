@@ -21,51 +21,7 @@
 
 use crate::ffi::{c_void, CStr};
 use crate::ptr::NonNull;
-use crate::sync::atomic::Ordering;
 use crate::sys::c;
-
-// This uses a static initializer to preload some imported functions.
-// The CRT (C runtime) executes static initializers before `main`
-// is called (for binaries) and before `DllMain` is called (for DLLs).
-//
-// It works by contributing a global symbol to the `.CRT$XCT` section.
-// The linker builds a table of all static initializer functions.
-// The CRT startup code then iterates that table, calling each
-// initializer function.
-//
-// NOTE: User code should instead use .CRT$XCU to reliably run after std's initializer.
-// If you're reading this and would like a guarantee here, please
-// file an issue for discussion; currently we don't guarantee any functionality
-// before main.
-// See https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=msvc-170
-#[used]
-#[link_section = ".CRT$XCT"]
-static INIT_TABLE_ENTRY: unsafe extern "C" fn() = init;
-
-/// Preload some imported functions.
-///
-/// Note that any functions included here will be unconditionally loaded in
-/// the final binary, regardless of whether or not they're actually used.
-///
-/// Therefore, this should be limited to `compat_fn_optional` functions which
-/// must be preloaded or any functions where lazier loading demonstrates a
-/// negative performance impact in practical situations.
-///
-/// Currently we only preload `WaitOnAddress` and `WakeByAddressSingle`.
-unsafe extern "C" fn init() {
-    // In an exe this code is executed before main() so is single threaded.
-    // In a DLL the system's loader lock will be held thereby synchronizing
-    // access. So the same best practices apply here as they do to running in DllMain:
-    // https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-best-practices
-    //
-    // DO NOT do anything interesting or complicated in this function! DO NOT call
-    // any Rust functions or CRT functions if those functions touch any global state,
-    // because this function runs during global initialization. For example, DO NOT
-    // do any dynamic allocation, don't call LoadLibrary, etc.
-
-    // Attempt to preload the synch functions.
-    load_synch_functions();
-}
 
 /// Helper macro for creating CStrs from literals and symbol names.
 macro_rules! ansi_str {
@@ -186,37 +142,4 @@ macro_rules! compat_fn_with_fallback {
         $(#[$meta])*
         $vis use $symbol::call as $symbol;
     )*)
-}
-
-/// Optionally loaded functions.
-///
-/// Actual loading of the function defers to $load_functions.
-macro_rules! compat_fn_optional {
-    ($load_functions:expr;
-    $(
-        $(#[$meta:meta])*
-        $vis:vis fn $symbol:ident($($argname:ident: $argtype:ty),*) $(-> $rettype:ty)?;
-    )+) => (
-        $(
-            pub mod $symbol {
-                use super::*;
-                use crate::ffi::c_void;
-                use crate::mem;
-                use crate::ptr::{self, NonNull};
-                use crate::sync::atomic::{AtomicPtr, Ordering};
-
-                pub(in crate::sys) static PTR: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
-
-                type F = unsafe extern "system" fn($($argtype),*) $(-> $rettype)?;
-
-                #[inline(always)]
-                pub fn option() -> Option<F> {
-                    // Miri does not understand the way we do preloading
-                    // therefore load the function here instead.
-                    #[cfg(miri)] $load_functions;
-                    NonNull::new(PTR.load(Ordering::Relaxed)).map(|f| unsafe { mem::transmute(f) })
-                }
-            }
-        )+
-    )
 }
