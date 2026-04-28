@@ -116,10 +116,6 @@ pub const SECURITY_SQOS_PRESENT: DWORD = 0x00100000;
 
 pub const FIONBIO: c_ulong = 0x8004667e;
 
-pub const MAX_PATH: usize = 260;
-
-pub const FILE_TYPE_PIPE: u32 = 3;
-
 #[repr(C)]
 #[derive(Copy)]
 pub struct WIN32_FIND_DATAW {
@@ -496,14 +492,6 @@ pub struct SYMBOLIC_LINK_REPARSE_BUFFER {
     pub PathBuffer: WCHAR,
 }
 
-/// NB: Use carefully! In general using this as a reference is likely to get the
-/// provenance wrong for the `PathBuffer` field!
-#[repr(C)]
-pub struct FILE_NAME_INFO {
-    pub FileNameLength: DWORD,
-    pub FileName: [WCHAR; 1],
-}
-
 #[repr(C)]
 pub struct MOUNT_POINT_REPARSE_BUFFER {
     pub SubstituteNameOffset: c_ushort,
@@ -535,10 +523,6 @@ pub struct CRITICAL_SECTION {
     OwningThread: HANDLE,
     LockSemaphore: HANDLE,
     SpinCount: ULONG_PTR,
-}
-#[repr(C)]
-pub struct INIT_ONCE {
-    pub ptr: LPVOID,
 }
 
 #[repr(C)]
@@ -1058,7 +1042,6 @@ extern "system" {
         lpTargetFileName: LPCWSTR,
         dwFlags: DWORD,
     ) -> BOOLEAN;
-    pub fn GetFileType(hfile: HANDLE) -> DWORD;
 
     pub fn CompareStringOrdinal(
         lpString1: LPCWSTR,

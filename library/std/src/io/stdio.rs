@@ -615,21 +615,15 @@ pub fn stdout() -> Stdout {
 // by replacing the line writer by one with zero
 // buffering capacity.
 pub fn cleanup() {
-    let mut initialized = false;
-    let stdout = STDOUT.get_or_init(|| {
-        initialized = true;
-        ReentrantMutex::new(RefCell::new(LineWriter::with_capacity(0, stdout_raw())))
-    });
-
-    if !initialized {
-        // The buffer was previously initialized, overwrite it here.
+    if let Some(instance) = STDOUT.get() {
+        // Flush the data and disable buffering during shutdown
+        // by replacing the line writer by one with zero
+        // buffering capacity.
         // We use try_lock() instead of lock(), because someone
         // might have leaked a StdoutLock, which would
         // otherwise cause a deadlock here.
-        if let Some(instance) = STDOUT.get() {
-            if let Some(lock) = Pin::static_ref(instance).try_lock() {
-                *lock.borrow_mut() = LineWriter::with_capacity(0, stdout_raw());
-            }
+        if let Some(lock) = Pin::static_ref(instance).try_lock() {
+            *lock.borrow_mut() = LineWriter::with_capacity(0, stdout_raw());
         }
     }
 }
