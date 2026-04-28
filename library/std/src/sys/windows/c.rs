@@ -90,22 +90,16 @@ pub const FILE_SHARE_DELETE: DWORD = 0x4;
 pub const FILE_SHARE_READ: DWORD = 0x1;
 pub const FILE_SHARE_WRITE: DWORD = 0x2;
 
-pub const FILE_OPEN: ULONG = 0x00000001;
-pub const FILE_OPEN_REPARSE_POINT: ULONG = 0x200000;
-pub const OBJ_DONT_REPARSE: ULONG = 0x1000;
-
 pub const CREATE_ALWAYS: DWORD = 2;
 pub const CREATE_NEW: DWORD = 1;
 pub const OPEN_ALWAYS: DWORD = 4;
 pub const OPEN_EXISTING: DWORD = 3;
 pub const TRUNCATE_EXISTING: DWORD = 5;
 
-pub const FILE_LIST_DIRECTORY: DWORD = 0x1;
 pub const FILE_WRITE_DATA: DWORD = 0x00000002;
 pub const FILE_APPEND_DATA: DWORD = 0x00000004;
 pub const FILE_WRITE_EA: DWORD = 0x00000010;
 pub const FILE_WRITE_ATTRIBUTES: DWORD = 0x00000100;
-pub const DELETE: DWORD = 0x10000;
 pub const READ_CONTROL: DWORD = 0x00020000;
 pub const SYNCHRONIZE: DWORD = 0x00100000;
 pub const GENERIC_READ: DWORD = 0x80000000;
@@ -269,8 +263,6 @@ pub const FD_SETSIZE: usize = 64;
 pub const STACK_SIZE_PARAM_IS_A_RESERVATION: DWORD = 0x00010000;
 
 pub const STATUS_SUCCESS: NTSTATUS = 0x00000000;
-pub const STATUS_DELETE_PENDING: NTSTATUS = 0xc0000056_u32 as _;
-pub const STATUS_INVALID_PARAMETER: NTSTATUS = 0xc000000d_u32 as _;
 
 pub const STATUS_PENDING: NTSTATUS = 0x103 as _;
 pub const STATUS_END_OF_FILE: NTSTATUS = 0xC0000011_u32 as _;
@@ -287,12 +279,6 @@ pub struct UNICODE_STRING {
     pub Length: u16,
     pub MaximumLength: u16,
     pub Buffer: *mut u16,
-}
-impl UNICODE_STRING {
-    pub fn from_ref(slice: &[u16]) -> Self {
-        let len = slice.len() * mem::size_of::<u16>();
-        Self { Length: len as _, MaximumLength: len as _, Buffer: slice.as_ptr() as _ }
-    }
 }
 #[repr(C)]
 pub struct OBJECT_ATTRIBUTES {
@@ -343,6 +329,7 @@ impl IO_STATUS_BLOCK {
         unsafe { self.u.Status }
     }
 }
+pub type PIO_STATUS_BLOCK = *mut IO_STATUS_BLOCK;
 
 pub type LPOVERLAPPED_COMPLETION_ROUTINE = unsafe extern "system" fn(
     dwErrorCode: DWORD,
@@ -447,26 +434,6 @@ pub enum FILE_INFO_BY_HANDLE_CLASS {
     FileIdExtdDirectoryRestartInfo = 20, // 0x14
     FileDispositionInfoEx = 21,          // 0x15, Windows 10 version 1607
     MaximumFileInfoByHandlesClass,
-}
-
-#[repr(C)]
-pub struct FILE_ATTRIBUTE_TAG_INFO {
-    pub FileAttributes: DWORD,
-    pub ReparseTag: DWORD,
-}
-
-#[repr(C)]
-pub struct FILE_DISPOSITION_INFO {
-    pub DeleteFile: BOOLEAN,
-}
-
-pub const FILE_DISPOSITION_DELETE: DWORD = 0x1;
-pub const FILE_DISPOSITION_POSIX_SEMANTICS: DWORD = 0x2;
-pub const FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE: DWORD = 0x10;
-
-#[repr(C)]
-pub struct FILE_DISPOSITION_INFO_EX {
-    pub Flags: DWORD,
 }
 
 #[repr(C)]
@@ -1071,18 +1038,6 @@ extern "system" {
         lpTargetFileName: LPCWSTR,
         dwFlags: DWORD,
     ) -> BOOLEAN;
-    pub fn GetFileInformationByHandleEx(
-        hFile: HANDLE,
-        fileInfoClass: FILE_INFO_BY_HANDLE_CLASS,
-        lpFileInformation: LPVOID,
-        dwBufferSize: DWORD,
-    ) -> BOOL;
-    pub fn SetFileInformationByHandle(
-        hFile: HANDLE,
-        FileInformationClass: FILE_INFO_BY_HANDLE_CLASS,
-        lpFileInformation: LPVOID,
-        dwBufferSize: DWORD,
-    ) -> BOOL;
     pub fn SleepConditionVariableSRW(
         ConditionVariable: PCONDITION_VARIABLE,
         SRWLock: PSRWLOCK,
@@ -1114,6 +1069,17 @@ extern "system" {
         lpFilePart: *mut LPWSTR,
     ) -> DWORD;
     pub fn GetFileAttributesW(lpFileName: LPCWSTR) -> DWORD;
+}
+
+#[link(name = "ntdll")]
+extern "system" {
+   pub fn NtSetInformationFile(
+       hFile: HANDLE,
+       IoStatusBlock: PIO_STATUS_BLOCK,
+       FileInformation: LPVOID,
+       Length: ULONG,
+       FileInformationClass: UINT,
+   ) -> NTSTATUS;
 }
 
 #[link(name = "ws2_32")]
