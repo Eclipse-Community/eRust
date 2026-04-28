@@ -1233,17 +1233,6 @@ compat_fn_with_fallback! {
     }
 }
 
-compat_fn_optional! {
-    crate::sys::compat::load_synch_functions();
-    pub fn WaitOnAddress(
-        Address: LPVOID,
-        CompareAddress: LPVOID,
-        AddressSize: SIZE_T,
-        dwMilliseconds: DWORD
-    );
-    pub fn WakeByAddressSingle(Address: LPVOID);
-}
-
 compat_fn_with_fallback! {
     pub static NTDLL: &CStr = ansi_str!("ntdll");
 
