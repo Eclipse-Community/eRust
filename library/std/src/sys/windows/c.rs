@@ -867,7 +867,6 @@ if #[cfg(not(target_vendor = "uwp"))] {
             lpTargetFileName: LPCWSTR,
             lpSecurityAttributes: LPSECURITY_ATTRIBUTES,
         ) -> BOOL;
-        pub fn SetThreadStackGuarantee(_size: *mut c_ulong) -> BOOL;
         pub fn GetWindowsDirectoryW(lpBuffer: LPWSTR, uSize: UINT) -> UINT;
     }
 }
@@ -1076,12 +1075,6 @@ extern "system" {
         lpTargetFileName: LPCWSTR,
         dwFlags: DWORD,
     ) -> BOOLEAN;
-    pub fn GetFinalPathNameByHandleW(
-        hFile: HANDLE,
-        lpszFilePath: LPCWSTR,
-        cchFilePath: DWORD,
-        dwFlags: DWORD,
-    ) -> DWORD;
     pub fn GetFileInformationByHandleEx(
         hFile: HANDLE,
         fileInfoClass: FILE_INFO_BY_HANDLE_CLASS,
@@ -1225,11 +1218,11 @@ extern "system" {
 compat_fn_with_fallback! {
     pub static KERNEL32: &CStr = ansi_str!("kernel32");
 
-    // >= Win10 1607
-    // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
-    pub fn SetThreadDescription(hThread: HANDLE,
-                                lpThreadDescription: LPCWSTR) -> HRESULT {
-        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); E_NOTIMPL
+    pub fn GetFinalPathNameByHandleW(_hFile: HANDLE,
+                                     _lpszFilePath: LPCWSTR,
+                                     _cchFilePath: DWORD,
+                                     _dwFlags: DWORD) -> DWORD {
+        SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); 0
     }
 }
 
