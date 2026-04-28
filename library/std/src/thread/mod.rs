@@ -1128,21 +1128,24 @@ impl ThreadId {
                     }
                 }
             } else {
-                use crate::sync::{Mutex, PoisonError};
+                use crate::sys_common::mutex::StaticMutex;
 
-                static COUNTER: Mutex<u64> = Mutex::new(0);
+                // It is UB to attempt to acquire this mutex reentrantly!
+                static GUARD: StaticMutex = StaticMutex::new();
+                static mut COUNTER: u64 = 0;
 
-                let mut counter = COUNTER.lock().unwrap_or_else(PoisonError::into_inner);
-                let Some(id) = counter.checked_add(1) else {
-                    // in case the panic handler ends up calling `ThreadId::new()`,
-                    // avoid reentrant lock acquire.
-                    drop(counter);
-                    exhausted();
-                };
+                unsafe {
+                    let guard = GUARD.lock();
 
-                *counter = id;
-                drop(counter);
-                ThreadId(NonZeroU64::new(id).unwrap())
+                    let Some(id) = COUNTER.checked_add(1) else {
+                        drop(guard); // in case the panic handler ends up calling `ThreadId::new()`, avoid reentrant lock acquire.
+                        exhausted();
+                    };
+
+                    COUNTER = id;
+                    drop(guard);
+                    ThreadId(NonZeroU64::new(id).unwrap())
+                }
             }
         }
     }
