@@ -18,9 +18,9 @@ use crate::intrinsics;
 use crate::mem::{self, ManuallyDrop};
 use crate::process;
 use crate::sync::atomic::{AtomicBool, Ordering};
-use crate::sync::{PoisonError, RwLock};
 use crate::sys::stdio::panic_output;
 use crate::sys_common::backtrace;
+use crate::sys_common::rwlock::StaticRwLock;
 use crate::sys_common::thread_info;
 use crate::thread;
 
@@ -71,29 +71,20 @@ extern "C" fn __rust_foreign_exception() -> ! {
     rtabort!("Rust cannot catch foreign exceptions");
 }
 
+#[derive(Copy, Clone)]
 enum Hook {
     Default,
-    Custom(Box<dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send>),
+    Custom(*mut (dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send)),
 }
 
 impl Hook {
-    #[inline]
-    fn into_box(self) -> Box<dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send> {
-        match self {
-            Hook::Default => Box::new(default_hook),
-            Hook::Custom(hook) => hook,
-        }
+    fn custom(f: impl Fn(&PanicInfo<'_>) + 'static + Sync + Send) -> Self {
+        Self::Custom(Box::into_raw(Box::new(f)))
     }
 }
 
-impl Default for Hook {
-    #[inline]
-    fn default() -> Hook {
-        Hook::Default
-    }
-}
-
-static HOOK: RwLock<Hook> = RwLock::new(Hook::Default);
+static HOOK_LOCK: StaticRwLock = StaticRwLock::new();
+static mut HOOK: Hook = Hook::Default;
 
 /// Registers a custom panic hook, replacing any that was previously registered.
 ///
@@ -134,13 +125,24 @@ pub fn set_hook(hook: Box<dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send>) {
         panic!("cannot modify the panic hook from a panicking thread");
     }
 
-    let new = Hook::Custom(hook);
-    let mut hook = HOOK.write().unwrap_or_else(PoisonError::into_inner);
-    let old = mem::replace(&mut *hook, new);
-    drop(hook);
-    // Only drop the old hook after releasing the lock to avoid deadlocking
-    // if its destructor panics.
-    drop(old);
+    // SAFETY:
+    //
+    // - `HOOK` can only be modified while holding write access to `HOOK_LOCK`.
+    // - The argument of `Box::from_raw` is always a valid pointer that was created using
+    // `Box::into_raw`.
+    unsafe {
+        let guard = HOOK_LOCK.write();
+        let old_hook = HOOK;
+        HOOK = Hook::Custom(Box::into_raw(hook));
+        drop(guard);
+
+        if let Hook::Custom(ptr) = old_hook {
+            #[allow(unused_must_use)]
+            {
+                Box::from_raw(ptr);
+            }
+        }
+    }
 }
 
 /// Unregisters the current panic hook, returning it.
@@ -177,11 +179,22 @@ pub fn take_hook() -> Box<dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send> {
         panic!("cannot modify the panic hook from a panicking thread");
     }
 
-    let mut hook = HOOK.write().unwrap_or_else(PoisonError::into_inner);
-    let old_hook = mem::take(&mut *hook);
-    drop(hook);
+    // SAFETY:
+    //
+    // - `HOOK` can only be modified while holding write access to `HOOK_LOCK`.
+    // - The argument of `Box::from_raw` is always a valid pointer that was created using
+    // `Box::into_raw`.
+    unsafe {
+        let guard = HOOK_LOCK.write();
+        let hook = HOOK;
+        HOOK = Hook::Default;
+        drop(guard);
 
-    old_hook.into_box()
+        match hook {
+            Hook::Default => Box::new(default_hook),
+            Hook::Custom(ptr) => Box::from_raw(ptr),
+        }
+    }
 }
 
 /// Atomic combination of [`take_hook`] and [`set_hook`]. Use this to replace the panic handler with
@@ -227,9 +240,24 @@ where
         panic!("cannot modify the panic hook from a panicking thread");
     }
 
-    let mut hook = HOOK.write().unwrap_or_else(PoisonError::into_inner);
-    let prev = mem::take(&mut *hook).into_box();
-    *hook = Hook::Custom(Box::new(move |info| hook_fn(&prev, info)));
+    // SAFETY:
+    //
+    // - `HOOK` can only be modified while holding write access to `HOOK_LOCK`.
+    // - The argument of `Box::from_raw` is always a valid pointer that was created using
+    // `Box::into_raw`.
+    unsafe {
+        let guard = HOOK_LOCK.write();
+        let old_hook = HOOK;
+        HOOK = Hook::Default;
+
+        let prev = match old_hook {
+            Hook::Default => Box::new(default_hook),
+            Hook::Custom(ptr) => Box::from_raw(ptr),
+        };
+
+        HOOK = Hook::custom(move |info| hook_fn(&prev, info));
+        drop(guard);
+    }
 }
 
 fn default_hook(info: &PanicInfo<'_>) {
@@ -673,26 +701,27 @@ fn rust_panic_with_hook(
         crate::sys::abort_internal();
     }
 
-    let mut info = PanicInfo::internal_constructor(message, location, can_unwind);
-    let hook = HOOK.read().unwrap_or_else(PoisonError::into_inner);
-    match *hook {
-        // Some platforms (like wasm) know that printing to stderr won't ever actually
-        // print anything, and if that's the case we can skip the default
-        // hook. Since string formatting happens lazily when calling `payload`
-        // methods, this means we avoid formatting the string at all!
-        // (The panic runtime might still call `payload.take_box()` though and trigger
-        // formatting.)
-        Hook::Default if panic_output().is_none() => {}
-        Hook::Default => {
-            info.set_payload(payload.get());
-            default_hook(&info);
-        }
-        Hook::Custom(ref hook) => {
-            info.set_payload(payload.get());
-            hook(&info);
-        }
-    };
-    drop(hook);
+    unsafe {
+        let mut info = PanicInfo::internal_constructor(message, location, can_unwind);
+        let _guard = HOOK_LOCK.read();
+        match HOOK {
+            // Some platforms (like wasm) know that printing to stderr won't ever actually
+            // print anything, and if that's the case we can skip the default
+            // hook. Since string formatting happens lazily when calling `payload`
+            // methods, this means we avoid formatting the string at all!
+            // (The panic runtime might still call `payload.take_box()` though and trigger
+            // formatting.)
+            Hook::Default if panic_output().is_none() => {}
+            Hook::Default => {
+                info.set_payload(payload.get());
+                default_hook(&info);
+            }
+            Hook::Custom(ptr) => {
+                info.set_payload(payload.get());
+                (*ptr)(&info);
+            }
+        };
+    }
 
     if panics > 1 || !can_unwind {
         // If a thread panics while it's already unwinding then we

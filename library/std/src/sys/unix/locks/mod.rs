@@ -11,21 +11,21 @@ cfg_if::cfg_if! {
         mod futex_rwlock;
         mod futex_condvar;
         pub use futex_mutex::{Mutex, MovableMutex};
-        pub use futex_rwlock::MovableRwLock;
+        pub use futex_rwlock::{RwLock, MovableRwLock};
         pub use futex_condvar::MovableCondvar;
     } else if #[cfg(target_os = "fuchsia")] {
         mod fuchsia_mutex;
         mod futex_rwlock;
         mod futex_condvar;
         pub use fuchsia_mutex::{Mutex, MovableMutex};
-        pub use futex_rwlock::MovableRwLock;
+        pub use futex_rwlock::{RwLock, MovableRwLock};
         pub use futex_condvar::MovableCondvar;
     } else {
         mod pthread_mutex;
         mod pthread_rwlock;
         mod pthread_condvar;
         pub use pthread_mutex::{Mutex, MovableMutex};
-        pub use pthread_rwlock::MovableRwLock;
+        pub use pthread_rwlock::{RwLock, MovableRwLock};
         pub use pthread_condvar::MovableCondvar;
     }
 }
