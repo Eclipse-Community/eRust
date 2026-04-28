@@ -1231,19 +1231,6 @@ compat_fn_with_fallback! {
                                 lpThreadDescription: LPCWSTR) -> HRESULT {
         SetLastError(ERROR_CALL_NOT_IMPLEMENTED as DWORD); E_NOTIMPL
     }
-
-    // >= Win8 / Server 2012
-    // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimepreciseasfiletime
-    pub fn GetSystemTimePreciseAsFileTime(lpSystemTimeAsFileTime: LPFILETIME)
-                                          -> () {
-        GetSystemTimeAsFileTime(lpSystemTimeAsFileTime)
-    }
-
-    // >= Win11 / Server 2022
-    // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2a
-    pub fn GetTempPath2W(nBufferLength: DWORD, lpBuffer: LPCWSTR) -> DWORD {
-        GetTempPathW(nBufferLength, lpBuffer)
-    }
 }
 
 compat_fn_optional! {
