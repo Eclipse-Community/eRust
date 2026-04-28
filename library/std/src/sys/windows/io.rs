@@ -1,10 +1,7 @@
 use crate::marker::PhantomData;
-use crate::mem::size_of;
 use crate::os::windows::io::{AsHandle, AsRawHandle, BorrowedHandle};
 use crate::slice;
-use crate::sys::{c, Align8};
-use core;
-use libc;
+use crate::sys::{c};
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -114,41 +111,5 @@ unsafe fn handle_is_console(handle: BorrowedHandle<'_>) -> bool {
             return false;
         }
     }
-
-    // Otherwise, we fall back to an msys hack to see if we can detect the presence of a pty.
-    msys_tty_on(handle)
-}
-
-unsafe fn msys_tty_on(handle: c::HANDLE) -> bool {
-    // Early return if the handle is not a pipe.
-    if c::GetFileType(handle) != c::FILE_TYPE_PIPE {
-        return false;
-    }
-
-    const SIZE: usize = size_of::<c::FILE_NAME_INFO>() + c::MAX_PATH * size_of::<c::WCHAR>();
-    let mut name_info_bytes = Align8([0u8; SIZE]);
-    let res = c::GetFileInformationByHandleEx(
-        handle,
-        c::FileNameInfo,
-        name_info_bytes.0.as_mut_ptr() as *mut libc::c_void,
-        SIZE as u32,
-    );
-    if res == 0 {
-        return false;
-    }
-    let name_info: &c::FILE_NAME_INFO = &*(name_info_bytes.0.as_ptr() as *const c::FILE_NAME_INFO);
-    let name_len = name_info.FileNameLength as usize / 2;
-    // Offset to get the `FileName` field.
-    let name_ptr = name_info_bytes.0.as_ptr().offset(size_of::<c::DWORD>() as isize).cast::<u16>();
-    let s = core::slice::from_raw_parts(name_ptr, name_len);
-    let name = String::from_utf16_lossy(s);
-    // Get the file name only.
-    let name = name.rsplit('\\').next().unwrap_or(&name);
-    // This checks whether 'pty' exists in the file name, which indicates that
-    // a pseudo-terminal is attached. To mitigate against false positives
-    // (e.g., an actual file name that contains 'pty'), we also require that
-    // the file name begins with either the strings 'msys-' or 'cygwin-'.)
-    let is_msys = name.starts_with("msys-") || name.starts_with("cygwin-");
-    let is_pty = name.contains("-pty");
-    is_msys && is_pty
+    return false;
 }
