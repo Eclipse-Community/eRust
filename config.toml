@@ -21,17 +21,12 @@ version-suffix = "-eRust-dev"
 build-stage = 2
 cargo-native-static = false
 # When compiling from source, you usually want all tools.
-#extended = true
+docs = true
+extended = true
 build = "x86_64-pc-windows-msvc"
 target = [
     "i686-pc-windows-msvc",
     "x86_64-pc-windows-msvc",
-]
-
-docs = false
-tools = [
-    "cargo",
-    "src",
 ]
 optimized-compiler-builtins = true
 #verbose = 1
@@ -62,6 +57,7 @@ debug-assertions = false
 [dist]
 src-tarball = false
 compression-profile = "best"
+compression-formats = ["xz"]
 
 [install]
 prefix = "../dist/rust"
