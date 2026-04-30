@@ -113,6 +113,9 @@ if #[cfg(not(target_vendor = "uwp"))] {
 compat_fn_with_fallback! {
     pub static KERNEL32: &CStr = c"kernel32";
 
+    pub fn SetThreadStackGuarantee(stacksizeinbytes : *mut u32) -> BOOL {
+        unsafe { SetLastError(ERROR_CALL_NOT_IMPLEMENTED as u32); 0 }
+    }
     pub fn SetThreadErrorMode(_dwNewMode: u32,
                               _lpOldMode: *mut u32) -> c_uint {
         unsafe { SetLastError(ERROR_CALL_NOT_IMPLEMENTED as u32); 0 }

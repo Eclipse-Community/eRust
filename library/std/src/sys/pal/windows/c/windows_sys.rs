@@ -99,7 +99,6 @@ windows_targets::link!("kernel32.dll" "system" fn SetFilePointerEx(hfile : HANDL
 windows_targets::link!("kernel32.dll" "system" fn SetFileTime(hfile : HANDLE, lpcreationtime : *const FILETIME, lplastaccesstime : *const FILETIME, lplastwritetime : *const FILETIME) -> BOOL);
 windows_targets::link!("kernel32.dll" "system" fn SetHandleInformation(hobject : HANDLE, dwmask : u32, dwflags : HANDLE_FLAGS) -> BOOL);
 windows_targets::link!("kernel32.dll" "system" fn SetLastError(dwerrcode : WIN32_ERROR));
-windows_targets::link!("kernel32.dll" "system" fn SetThreadStackGuarantee(stacksizeinbytes : *mut u32) -> BOOL);
 windows_targets::link!("kernel32.dll" "system" fn SetWaitableTimer(htimer : HANDLE, lpduetime : *const i64, lperiod : i32, pfncompletionroutine : PTIMERAPCROUTINE, lpargtocompletionroutine : *const core::ffi::c_void, fresume : BOOL) -> BOOL);
 windows_targets::link!("kernel32.dll" "system" fn Sleep(dwmilliseconds : u32));
 windows_targets::link!("kernel32.dll" "system" fn SleepConditionVariableSRW(conditionvariable : *mut CONDITION_VARIABLE, srwlock : *mut SRWLOCK, dwmilliseconds : u32, flags : u32) -> BOOL);
