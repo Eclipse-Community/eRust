@@ -11,6 +11,8 @@ use core::{mem, ptr};
 mod windows_sys;
 pub use windows_sys::*;
 
+pub(crate) mod fileextd;
+
 pub type WCHAR = u16;
 
 pub const INVALID_HANDLE_VALUE: HANDLE = ::core::ptr::without_provenance_mut(-1i32 as _);
@@ -187,6 +189,11 @@ compat_fn_optional! {
     pub fn WakeByAddressSingle(address: *const c_void);
 }
 
+pub(crate) use fileextd::{
+    get_file_information_by_handle_ex as GetFileInformationByHandleEx,
+    set_file_information_by_handle as SetFileInformationByHandle,
+};
+
 compat_fn_with_fallback! {
     pub static NTDLL: &CStr = c"ntdll";
 
@@ -213,6 +220,44 @@ compat_fn_with_fallback! {
         Timeout: *mut i64
     ) -> NTSTATUS {
         panic!("keyed events not available")
+    }
+
+    fn NtQueryDirectoryFile(
+        filehandle: HANDLE,
+        event: HANDLE,
+        apcroutine: PIO_APC_ROUTINE,
+        apccontext: *const core::ffi::c_void,
+        iostatusblock: *mut IO_STATUS_BLOCK,
+        fileinformation: *mut core::ffi::c_void,
+        length: u32,
+        fileinformationclass: FILE_INFORMATION_CLASS,
+        returnsingleentry: BOOL,
+        filename: *const UNICODE_STRING,
+        restartscan: BOOL
+    ) -> NTSTATUS {
+        rtabort!("unimplemented")
+    }
+    fn NtQueryInformationFile(filehandle: HANDLE,
+        iostatusblock: *mut IO_STATUS_BLOCK,
+        fileinformation: *mut core::ffi::c_void,
+        length: u32,
+        fileinformationclass: FILE_INFORMATION_CLASS
+    ) -> NTSTATUS {
+        rtabort!("unimplemented")
+    }
+    fn NtSetInformationFile(filehandle: HANDLE,
+        iostatusblock: *mut IO_STATUS_BLOCK,
+        fileinformation: *const core::ffi::c_void,
+        length: u32,
+        fileinformationclass: FILE_INFORMATION_CLASS
+    ) -> NTSTATUS {
+        rtabort!("unimplemented")
+    }
+    fn NtWaitForSingleObject(handle: HANDLE,
+        alertable: BOOL,
+        timeout: *mut i64
+    ) -> NTSTATUS {
+        rtabort!("unimplemented")
     }
 
     // These functions are available on UWP when lazily loaded. They will fail WACK if loaded statically.

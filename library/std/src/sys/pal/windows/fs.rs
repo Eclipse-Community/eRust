@@ -832,7 +832,7 @@ impl File {
     #[allow(unused)]
     fn fill_dir_buff(&self, buffer: &mut DirBuff, restart: bool) -> Result<bool, WinError> {
         let class =
-            if restart { c::FileIdBothDirectoryRestartInfo } else { c::FileIdBothDirectoryInfo };
+            if restart { c::FileFullDirectoryRestartInfo } else { c::FileFullDirectoryInfo };
 
         unsafe {
             let result = c::GetFileInformationByHandleEx(
@@ -908,7 +908,7 @@ impl<'a> Iterator for DirBuffIter<'a> {
         //   `FILE_ID_BOTH_DIR_INFO` and the trailing filename (for at least
         //   `FileNameLength` bytes)
         let (name, is_directory, next_entry) = unsafe {
-            let info = buffer.as_ptr().cast::<c::FILE_ID_BOTH_DIR_INFO>();
+            let info = buffer.as_ptr().cast::<c::FILE_FULL_DIR_INFO>();
             // While this is guaranteed to be aligned in documentation for
             // https://docs.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_both_dir_info
             // it does not seem that reality is so kind, and assuming this
