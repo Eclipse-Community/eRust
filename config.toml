@@ -14,7 +14,7 @@ cxxflags = "-Qunused-arguments -O2 -msse2 /clang:-O3"
 ldflags = "-Wl,-O3 -msse2"
 polly = true
 clang = true
-clang-cl = "C:/Program Files/LLVM/bin/clang-cl.exe"
+clang-cl = "C:/DEV/LLVM/bin/clang-cl.exe"
 version-suffix = "-eRust-dev"
 
 [build]
